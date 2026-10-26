@@ -23,6 +23,7 @@ export const OfflineBanner: React.FC = () => {
   const translateY = useRef(new Animated.Value(-100)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const wasOffline = useRef<boolean>(false);
+  const useNativeDriver = Platform.OS !== 'web';
 
   // Pulsing animation for the warning dot
   useEffect(() => {
@@ -33,12 +34,12 @@ export const OfflineBanner: React.FC = () => {
           Animated.timing(pulseAnim, {
             toValue: 0.3,
             duration: 700,
-            useNativeDriver: true,
+            useNativeDriver,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
             duration: 700,
-            useNativeDriver: true,
+            useNativeDriver,
           }),
         ])
       );
@@ -50,7 +51,7 @@ export const OfflineBanner: React.FC = () => {
     return () => {
       pulseLoop?.stop();
     };
-  }, [isOffline, pulseAnim]);
+  }, [isOffline, pulseAnim, useNativeDriver]);
 
   // Slide banner in/out based on offline status
   useEffect(() => {
@@ -61,7 +62,7 @@ export const OfflineBanner: React.FC = () => {
 
       Animated.spring(translateY, {
         toValue: 0,
-        useNativeDriver: true,
+        useNativeDriver,
         bounciness: 4,
       }).start();
     } else if (wasOffline.current) {
@@ -73,7 +74,7 @@ export const OfflineBanner: React.FC = () => {
         Animated.timing(translateY, {
           toValue: -100,
           duration: 350,
-          useNativeDriver: true,
+          useNativeDriver,
         }).start(() => {
           setVisible(false);
           setJustReconnected(false);
@@ -82,7 +83,7 @@ export const OfflineBanner: React.FC = () => {
 
       return () => clearTimeout(hideTimer);
     }
-  }, [isOffline, translateY]);
+  }, [isOffline, translateY, useNativeDriver]);
 
   if (!visible) return null;
 

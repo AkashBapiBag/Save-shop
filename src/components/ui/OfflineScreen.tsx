@@ -43,6 +43,7 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
   const pulseOpacity2 = useRef(new Animated.Value(0.4)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const useNativeDriver = Platform.OS !== 'web';
 
   // Start smooth radar ripple and float animations
   useEffect(() => {
@@ -53,13 +54,13 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
           toValue: 1.7,
           duration: 2200,
           easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver,
         }),
         Animated.timing(pulseOpacity1, {
           toValue: 0,
           duration: 2200,
           easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver,
         }),
       ])
     );
@@ -73,13 +74,13 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
             toValue: 1.9,
             duration: 2200,
             easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
+            useNativeDriver,
           }),
           Animated.timing(pulseOpacity2, {
             toValue: 0,
             duration: 2200,
             easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
+            useNativeDriver,
           }),
         ]),
       ])
@@ -92,13 +93,13 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
           toValue: -6,
           duration: 1600,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver,
         }),
         Animated.timing(floatAnim, {
           toValue: 0,
           duration: 1600,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
+          useNativeDriver,
         }),
       ])
     );
@@ -112,18 +113,18 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
       radarAnimation2.stop();
       floatAnimation.stop();
     };
-  }, [pulseScale1, pulseOpacity1, pulseScale2, pulseOpacity2, floatAnim]);
+  }, [pulseScale1, pulseOpacity1, pulseScale2, pulseOpacity2, floatAnim, useNativeDriver]);
 
   // Trigger tactile shake animation when a retry fails
   const triggerShake = useCallback(() => {
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: -10, duration: 70, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 10, duration: 70, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -7, duration: 70, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 7, duration: 70, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 70, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 70, useNativeDriver }),
+      Animated.timing(shakeAnim, { toValue: 10, duration: 70, useNativeDriver }),
+      Animated.timing(shakeAnim, { toValue: -7, duration: 70, useNativeDriver }),
+      Animated.timing(shakeAnim, { toValue: 7, duration: 70, useNativeDriver }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 70, useNativeDriver }),
     ]).start();
-  }, [shakeAnim]);
+  }, [shakeAnim, useNativeDriver]);
 
   const isChecking = localChecking || contextChecking;
 
