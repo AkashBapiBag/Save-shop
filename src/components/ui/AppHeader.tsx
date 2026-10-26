@@ -8,6 +8,7 @@ import {
   FlatList,
   Platform,
   Image,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { formatImageUri } from '@/utils/imageUtils';
 import { PWAInstallButton } from '@/components/ui/PWAInstallModal';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 
 export const AppHeader: React.FC = () => {
   const { user, activeStore, stores, switchStore, logout, isAdmin } = useAuth();
@@ -54,13 +56,17 @@ export const AppHeader: React.FC = () => {
         <View style={styles.rightGroup}>
           <PWAInstallButton variant="pill" />
           <TouchableOpacity
-            style={styles.profileButton}
             activeOpacity={0.7}
             onPress={() => setProfileModalVisible(true)}
+            accessibilityLabel="User profile and account settings"
           >
-            <Text style={styles.avatarText}>
-              {(user?.name || user?.email || 'U')[0].toUpperCase()}
-            </Text>
+            <UserAvatar
+              uri={user?.picture_url}
+              name={user?.name}
+              email={user?.email}
+              size={34}
+              showGoogleBadge={true}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -173,46 +179,82 @@ export const AppHeader: React.FC = () => {
         >
           <View style={styles.modalCard} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>User Session</Text>
+              <View>
+                <Text style={styles.modalTitle}>User Session</Text>
+                <Text style={styles.modalSubtitle}>Google Profile & Account</Text>
+              </View>
               <TouchableOpacity onPress={() => setProfileModalVisible(false)}>
                 <Ionicons name="close" size={22} color={Palette.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.profileDetails}>
-              <View style={styles.largeAvatar}>
-                <Text style={styles.largeAvatarText}>
-                  {(user?.name || user?.email || 'U')[0].toUpperCase()}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 10 }}>
+              <View style={styles.profileDetails}>
+                <View style={styles.largeAvatarContainer}>
+                  <UserAvatar
+                    uri={user?.picture_url}
+                    name={user?.name}
+                    email={user?.email}
+                    size={72}
+                    fontSize={28}
+                    showGoogleBadge={true}
+                    googleBadgeSize={22}
+                    borderColor={Palette.bluePrimary}
+                    borderWidth={2}
+                  />
+                </View>
+
+                <Text style={styles.profileName} numberOfLines={1}>
+                  {user?.name || 'Store Staff'}
                 </Text>
+                <Text style={styles.profileEmail} numberOfLines={1}>
+                  {user?.email}
+                </Text>
+
+                {/* Google Connected Badge */}
+                <View style={styles.googleConnectedBadge}>
+                  <Ionicons name="shield-checkmark" size={13} color={Palette.emerald} />
+                  <Text style={styles.googleConnectedText}>Signed in with Google</Text>
+                </View>
+
+                <View style={{ marginTop: 8 }}>
+                  <Badge
+                    label={isAdmin ? 'ADMINISTRATOR' : 'STORE OPERATOR'}
+                    variant={isAdmin ? 'purple' : 'primary'}
+                  />
+                </View>
               </View>
-              <Text style={styles.profileName} numberOfLines={1}>{user?.name || 'Store Staff'}</Text>
-              <Text style={styles.profileEmail} numberOfLines={1}>{user?.email}</Text>
-              <View style={{ marginTop: 8 }}>
-                <Badge
-                  label={isAdmin ? 'ADMINISTRATOR' : 'STORE STAFF'}
-                  variant={isAdmin ? 'purple' : 'primary'}
-                />
+
+              {/* Current Store Context */}
+              <View style={styles.profileMeta}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                  <Ionicons name="storefront-outline" size={13} color={Palette.bluePrimary} style={{ marginRight: 6 }} />
+                  <Text style={styles.metaLabel}>Current Store Context</Text>
+                </View>
+                <Text style={styles.metaValue} numberOfLines={1}>
+                  {activeStore?.name || 'None Selected'}
+                </Text>
+                {activeStore?.address ? (
+                  <Text style={styles.metaSubValue} numberOfLines={1}>
+                    {activeStore.address}
+                  </Text>
+                ) : null}
               </View>
-            </View>
 
-            <View style={styles.profileMeta}>
-              <Text style={styles.metaLabel}>Current Store</Text>
-              <Text style={styles.metaValue} numberOfLines={1}>{activeStore?.name || 'None'}</Text>
-            </View>
+              {/* PWA Install Option */}
+              <PWAInstallButton variant="card" />
 
-            {/* PWA Install Option */}
-            <PWAInstallButton variant="card" />
-
-            <Button
-              title="Sign Out"
-              variant="danger"
-              size="md"
-              onPress={async () => {
-                setProfileModalVisible(false);
-                await logout();
-              }}
-              style={{ marginTop: 16 }}
-            />
+              <Button
+                title="Sign Out"
+                variant="danger"
+                size="md"
+                onPress={async () => {
+                  setProfileModalVisible(false);
+                  await logout();
+                }}
+                style={{ marginTop: 14 }}
+              />
+            </ScrollView>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -254,12 +296,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: Palette.navyPrimary,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
+  headerAvatarImage: {
+    width: 31,
+    height: 31,
+    borderRadius: 15.5,
+  },
+  googleIndicatorBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#4285F4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
   avatarText: {
     color: '#FFFFFF',
@@ -355,19 +418,44 @@ const styles = StyleSheet.create({
   },
   profileDetails: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 12,
+  },
+  largeAvatarContainer: {
+    position: 'relative',
+    marginBottom: 10,
   },
   largeAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: Palette.navyPrimary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+  },
+  largeAvatarImage: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 2,
+    borderColor: Palette.bluePrimary,
+  },
+  largeGoogleBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#4285F4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   largeAvatarText: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -381,11 +469,30 @@ const styles = StyleSheet.create({
     color: Palette.textSecondary,
     marginTop: 2,
   },
+  googleConnectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginTop: 8,
+    gap: 5,
+  },
+  googleConnectedText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Palette.emerald,
+  },
   profileMeta: {
     backgroundColor: Palette.surfaceLight,
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
   },
   metaLabel: {
     fontSize: 11,
@@ -395,8 +502,12 @@ const styles = StyleSheet.create({
   },
   metaValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Palette.textPrimary,
+  },
+  metaSubValue: {
+    fontSize: 12,
+    color: Palette.textSecondary,
     marginTop: 2,
   },
 });

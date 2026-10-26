@@ -20,6 +20,7 @@ interface AuthContextType {
     email?: string;
     name?: string;
     role?: UserRole;
+    picture_url?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
   switchStore: (storeId: string) => Promise<void>;
@@ -108,6 +109,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     email?: string;
     name?: string;
     role?: UserRole;
+    picture_url?: string;
   }) => {
     setIsLoading(true);
     try {

@@ -207,3 +207,32 @@ vi.mock('react-native-safe-area-context', () => ({
 vi.mock('@expo/vector-icons', () => ({
   Ionicons: () => null,
 }));
+
+// Mock @react-native-community/netinfo
+let mockNetInfoListeners: ((state: any) => void)[] = [];
+let currentNetInfoState = {
+  isConnected: true,
+  isInternetReachable: true,
+  type: 'wifi',
+  details: { isConnectionExpensive: false },
+};
+
+(globalThis as any).__setMockNetInfo = (newState: any) => {
+  currentNetInfoState = { ...currentNetInfoState, ...newState };
+  mockNetInfoListeners.forEach((listener) => listener(currentNetInfoState));
+};
+
+vi.mock('@react-native-community/netinfo', () => ({
+  default: {
+    addEventListener: vi.fn((listener: (state: any) => void) => {
+      mockNetInfoListeners.push(listener);
+      listener(currentNetInfoState);
+      return () => {
+        mockNetInfoListeners = mockNetInfoListeners.filter((l) => l !== listener);
+      };
+    }),
+    fetch: vi.fn(() => Promise.resolve(currentNetInfoState)),
+    useNetInfo: vi.fn(() => currentNetInfoState),
+  },
+  useNetInfo: vi.fn(() => currentNetInfoState),
+}));

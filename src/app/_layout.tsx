@@ -1,10 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, Platform, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as WebBrowser from 'expo-web-browser';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { NetworkProvider, useNetworkStatus } from '@/context/NetworkContext';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
+import { OfflineScreen } from '@/components/ui/OfflineScreen';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { LoginScreen } from '@/screens/LoginScreen';
 import { MainNavigator } from '@/components/MainNavigator';
 import { Palette } from '@/theme/designSystem';
@@ -38,8 +42,17 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
   }
 }
 
-// Inject native desktop application styling on Web
+// Inject native desktop application styling and referrer policy on Web
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  // Prevent Google CDN 429/403 hotlinking rate-limiting by omitting localhost/tunnel referrer
+  const existingMeta = document.querySelector('meta[name="referrer"]');
+  if (!existingMeta) {
+    const meta = document.createElement('meta');
+    meta.name = 'referrer';
+    meta.content = 'no-referrer';
+    document.head.appendChild(meta);
+  }
+
   const styleId = 'save-shop-native-app-styles';
   if (!document.getElementById(styleId)) {
     const style = document.createElement('style');
@@ -94,6 +107,8 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
 function RootContent() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { isOffline, checkConnection } = useNetworkStatus();
+  const [allowOfflineLoginBypass, setAllowOfflineLoginBypass] = useState(false);
 
   useEffect(() => {
     if (!isLoading) {
@@ -129,6 +144,19 @@ function RootContent() {
   }
 
   if (!isAuthenticated) {
+    if (isOffline && !allowOfflineLoginBypass) {
+      return (
+        <OfflineScreen
+          title="Device is Offline"
+          message="SaveShop requires an active internet connection to authenticate your account and securely synchronize your stores."
+          onRetry={async () => {
+            await checkConnection();
+          }}
+          showDismiss
+          onDismiss={() => setAllowOfflineLoginBypass(true)}
+        />
+      );
+    }
     return <LoginScreen />;
   }
 
@@ -139,9 +167,14 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <AuthProvider>
-        <RootContent />
-      </AuthProvider>
+      <ErrorBoundary>
+        <NetworkProvider>
+          <AuthProvider>
+            <OfflineBanner />
+            <RootContent />
+          </AuthProvider>
+        </NetworkProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }

@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { CalendarModal } from '@/components/ui/CalendarModal';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { SuccessModal } from '@/components/ui/SuccessModal';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, AuthContext } from '@/context/AuthContext';
 
 vi.mock('@/services/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/api')>();
@@ -253,9 +253,54 @@ describe('components/ui/AppHeader.tsx', () => {
     const avatar = screen.getByText(/^[A-Z]$/);
     fireEvent.click(avatar);
     expect(screen.getByText('User Session')).toBeDefined();
+    expect(screen.getByText('Signed in with Google')).toBeDefined();
     const signOutBtn = screen.getByText('Sign Out');
     expect(signOutBtn).toBeDefined();
     fireEvent.click(signOutBtn);
+  });
+
+  it('renders Google user profile image when picture_url is present', async () => {
+    const mockUser = {
+      user_id: 'usr-1234-5678-9012',
+      name: 'Google Verified User',
+      email: 'verified@google.com',
+      role: 'admin' as const,
+      picture_url: 'https://lh3.googleusercontent.com/a/google-avatar-img',
+      accessible_store_ids: [],
+      created_at: new Date().toISOString(),
+    };
+
+    render(
+      <AuthContext.Provider
+        value={{
+          user: mockUser,
+          token: 'mock-token',
+          activeStore: null,
+          stores: [],
+          isLoading: false,
+          isAuthenticated: true,
+          isAdmin: true,
+          login: vi.fn(),
+          logout: vi.fn(),
+          switchStore: vi.fn(),
+          refreshStores: vi.fn(),
+          refreshUser: vi.fn(),
+        }}
+      >
+        <AppHeader />
+      </AuthContext.Provider>
+    );
+
+    // Profile button should render and be clickable
+    const profileBtn = screen.getByLabelText('User profile and account settings');
+    expect(profileBtn).toBeDefined();
+    fireEvent.click(profileBtn);
+
+    // Should display Google SSO user name, email, and Google badge in the modal
+    expect(screen.getByText('Google Verified User')).toBeDefined();
+    expect(screen.getByText('verified@google.com')).toBeDefined();
+    expect(screen.getByText('Signed in with Google')).toBeDefined();
+    expect(screen.getByText('ADMINISTRATOR')).toBeDefined();
   });
 });
 

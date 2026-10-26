@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { emitGlobalNetworkStatus } from '@/utils/networkEvents';
 import {
   User,
   Store,
@@ -274,12 +275,14 @@ export async function apiRequest<T>(
       throw new APIError(errorMsg as string, errorCode as string, response.status, errorDetails);
     }
 
+    emitGlobalNetworkStatus(false);
     return data as unknown as T;
   } catch (err: unknown) {
     clearTimeout(timeoutId);
     if (err instanceof APIError) {
       throw err;
     }
+    emitGlobalNetworkStatus(true);
     const maybeError = err as { name?: string; message?: string } | undefined;
     if (maybeError?.name === 'AbortError') {
       throw new APIError(

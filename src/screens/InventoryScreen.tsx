@@ -27,10 +27,13 @@ import { InventoryProductCard } from '@/components/inventory/InventoryProductCar
 import { CreateProductModal } from '@/components/inventory/CreateProductModal';
 import { ReceiveStockModal } from '@/components/inventory/ReceiveStockModal';
 import { BatchInspectionModal } from '@/components/inventory/BatchInspectionModal';
+import { OfflineScreen } from '@/components/ui/OfflineScreen';
+import { useNetworkStatus } from '@/context/NetworkContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
 export const InventoryScreen: React.FC = () => {
   const { activeStore } = useAuth();
+  const { isOffline } = useNetworkStatus();
   const insets = useSafeAreaInsets();
   const safeTop = insets.top;
 
@@ -207,6 +210,15 @@ export const InventoryScreen: React.FC = () => {
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Palette.navyPrimary} />
           <Text style={styles.loadingText}>Loading products...</Text>
+        </View>
+      ) : isOffline && products.length === 0 ? (
+        <View style={styles.centerContainer}>
+          <OfflineScreen
+            compact
+            title="Inventory Offline"
+            message="Your product inventory cannot be fetched while offline. Please connect to the internet and tap retry."
+            onRetry={() => loadCatalog(false)}
+          />
         </View>
       ) : filteredProducts.length === 0 ? (
         <View style={styles.centerContainer}>

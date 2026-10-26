@@ -15,6 +15,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
           name="viewport"
           content="width=device-width, initial-scale=1, shrink-to-fit=no"
         />
+        {/* Do not send referrer to 3rd-party CDNs (fixes Google usercontent 429 / 403 hotlinking blocks) */}
+        <meta name="referrer" content="no-referrer" />
 
         {/* PWA Manifest and Theme */}
         <link rel="manifest" href="/manifest.json" />

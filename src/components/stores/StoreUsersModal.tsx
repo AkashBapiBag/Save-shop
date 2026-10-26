@@ -11,6 +11,7 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Store, StoreOperator, StoreInvitation } from '@/types/api';
@@ -18,6 +19,7 @@ import { storeApi } from '@/services/api';
 import { Palette, Shadows } from '@/theme/designSystem';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { SuccessModal } from '@/components/ui/SuccessModal';
 import { AuthContext } from '@/context/AuthContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
@@ -38,11 +40,20 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
   const auth = useContext(AuthContext);
   const user = auth?.user || null;
   const [emailInput, setEmailInput] = useState('');
+  const [selectedRole, setSelectedRole] = useState<'user' | 'admin'>('user');
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [operators, setOperators] = useState<StoreOperator[]>([]);
   const [invitations, setInvitations] = useState<StoreInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    type: 'operator' | 'invitation';
+    id: string;
+    email: string;
+    name?: string;
+    role?: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [successFeedback, setSuccessFeedback] = useState<{
     visible: boolean;
     title: string;
@@ -68,6 +79,7 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
   useEffect(() => {
     if (visible && store) {
       setEmailInput('');
+      setSelectedRole('user');
       loadData();
     }
   }, [visible, store, loadData]);
@@ -88,9 +100,10 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
     try {
       const res = await storeApi.addStoreOperator(store.store_id, {
         email: trimmed,
-        role: 'user',
+        role: selectedRole,
       });
       setEmailInput('');
+      setSelectedRole('user');
       await loadData();
       if (onUpdated) onUpdated();
 
@@ -106,8 +119,12 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
           { label: 'Store', value: store.name },
           { label: 'Operator Email', value: trimmed },
           {
+            label: 'Assigned Role',
+            value: selectedRole === 'admin' ? 'Store Administrator' : 'Staff / Cashier',
+          },
+          {
             label: 'Access Mode',
-            value: res.status === 'assigned' ? 'Instant Operator Access' : 'Auto-assign on login',
+            value: res.status === 'assigned' ? 'Instant Access' : 'Auto-assign on login',
           },
         ],
       });
@@ -124,53 +141,70 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
   };
 
   const handleRemoveOperator = (op: StoreOperator) => {
-    if (!store?.store_id) return;
-    Alert.alert(
-      'Remove Staff Member',
-      `Remove access to '${store.name}' for ${op.email}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await storeApi.removeStoreOperator(store.store_id, op.user_id);
-              await loadData();
-              if (onUpdated) onUpdated();
-              Alert.alert('Access Removed', `Operator ${op.email} has been removed from this store.`);
-            } catch (err: unknown) {
-              showErrorAlert(err, 'Removal Failed', 'Could not remove operator.');
-            }
-          },
-        },
-      ]
-    );
+    setDeleteConfirmation({
+      type: 'operator',
+      id: op.user_id,
+      email: op.email,
+      name: op.name,
+      role: op.role,
+    });
   };
 
   const handleRevokeInvitation = (inv: StoreInvitation) => {
-    if (!store?.store_id) return;
-    Alert.alert(
-      'Cancel Invitation',
-      `Cancel pending invitation for ${inv.email}?`,
-      [
-        { text: 'Keep', style: 'cancel' },
-        {
-          text: 'Cancel Invite',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await storeApi.revokeStoreInvitation(store.store_id, inv.invitation_id);
-              await loadData();
-              if (onUpdated) onUpdated();
-              Alert.alert('Cancelled', `Pending invitation for ${inv.email} was removed.`);
-            } catch (err: unknown) {
-              showErrorAlert(err, 'Revoke Failed', 'Could not cancel invitation.');
-            }
-          },
-        },
-      ]
-    );
+    setDeleteConfirmation({
+      type: 'invitation',
+      id: inv.invitation_id,
+      email: inv.email,
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmation || !store?.store_id) return;
+    setIsDeleting(true);
+    try {
+      if (deleteConfirmation.type === 'operator') {
+        await storeApi.removeStoreOperator(store.store_id, deleteConfirmation.id);
+        await loadData();
+        if (onUpdated) onUpdated();
+        setSuccessFeedback({
+          visible: true,
+          title: deleteConfirmation.role === 'admin' ? 'Administrator Removed' : 'Staff Member Removed',
+          message: `Access for ${deleteConfirmation.email} has been removed from ${store.name}.`,
+          badgeText: 'ACCESS REMOVED',
+          details: [
+            { label: 'Store', value: store.name },
+            { label: 'Email', value: deleteConfirmation.email },
+            {
+              label: 'Role Removed',
+              value: deleteConfirmation.role === 'admin' ? 'Store Administrator' : 'Staff / Cashier',
+            },
+          ],
+        });
+      } else {
+        await storeApi.revokeStoreInvitation(store.store_id, deleteConfirmation.id);
+        await loadData();
+        if (onUpdated) onUpdated();
+        setSuccessFeedback({
+          visible: true,
+          title: 'Invitation Cancelled',
+          message: `Pending invitation for ${deleteConfirmation.email} was removed.`,
+          badgeText: 'CANCELLED',
+          details: [
+            { label: 'Store', value: store.name },
+            { label: 'Invited Email', value: deleteConfirmation.email },
+          ],
+        });
+      }
+      setDeleteConfirmation(null);
+    } catch (err: unknown) {
+      showErrorAlert(
+        err,
+        deleteConfirmation.type === 'operator' ? 'Removal Failed' : 'Cancel Failed',
+        deleteConfirmation.type === 'operator' ? 'Could not remove operator.' : 'Could not cancel invitation.'
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -211,7 +245,8 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
             style={styles.scrollArea}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
           >
             {/* Add User by Email Section */}
             <View style={styles.addCard}>
@@ -293,16 +328,58 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.tipBox}>
-                <Ionicons
-                  name="flash-outline"
-                  size={13}
-                  color={Palette.bluePrimary}
-                  style={{ marginRight: 6, marginTop: 1 }}
-                />
-                <Text style={styles.tipText}>
-                  Registered users get instant access. Unregistered users are auto-assigned as soon as they sign in.
-                </Text>
+              {/* Role Selection Pill Selector */}
+              <View style={styles.roleSelectSection}>
+                <Text style={styles.roleSelectLabel}>Assign Role:</Text>
+                <View style={styles.roleOptionsContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleOptionButton,
+                      selectedRole === 'user' && styles.roleOptionButtonActiveUser,
+                    ]}
+                    onPress={() => setSelectedRole('user')}
+                    activeOpacity={0.7}
+                    accessibilityLabel="Select Staff / Cashier role"
+                  >
+                    <Ionicons
+                      name="cart-outline"
+                      size={14}
+                      color={selectedRole === 'user' ? Palette.bluePrimary : Palette.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.roleOptionText,
+                        selectedRole === 'user' && styles.roleOptionTextActiveUser,
+                      ]}
+                    >
+                      Staff / Cashier
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.roleOptionButton,
+                      selectedRole === 'admin' && styles.roleOptionButtonActiveAdmin,
+                    ]}
+                    onPress={() => setSelectedRole('admin')}
+                    activeOpacity={0.7}
+                    accessibilityLabel="Select Store Admin role"
+                  >
+                    <Ionicons
+                      name="shield-outline"
+                      size={14}
+                      color={selectedRole === 'admin' ? '#7C3AED' : Palette.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.roleOptionText,
+                        selectedRole === 'admin' && styles.roleOptionTextActiveAdmin,
+                      ]}
+                    >
+                      Store Admin
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -327,23 +404,64 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
                       <Ionicons name="people-outline" size={26} color={Palette.textMuted} />
                       <Text style={styles.emptyText}>No assigned operators for this store yet.</Text>
                     </View>
-                  ) : (
-                    operators.map((op) => {
-                      const isCurrentUser =
-                        (!!user?.user_id && op.user_id === user.user_id) ||
-                        (!!user?.email && op.email.toLowerCase() === user.email.toLowerCase());
-                      const isStoreOwner =
-                        isCurrentUser ||
-                        (!!store?.email && op.email.toLowerCase() === store.email.toLowerCase()) ||
-                        (!!store?.owner_name && !!op.name && op.name.toLowerCase() === store.owner_name.toLowerCase());
+                  ) : (() => {
+                    // STRICT 1-OWNER RULE: Exactly 1 owner user ID for the entire store
+                    const resolvedOwnerId =
+                      store?.owner_id ||
+                      operators.find((o) => o.is_owner)?.user_id ||
+                      (!store?.owner_id && store?.email
+                        ? operators.find((o) => o.email?.trim().toLowerCase() === store.email?.trim().toLowerCase())?.user_id
+                        : null) ||
+                      (!store?.owner_id && store?.owner_name
+                        ? operators.find((o) => o.name?.trim().toLowerCase() === store.owner_name?.trim().toLowerCase())?.user_id
+                        : null);
+
+                    // STRICT RULE: Store Owner is ALWAYS the 1st item in the list
+                    const sortedOperators = [...operators].sort((a, b) => {
+                      const aIsOwner = Boolean(
+                        a.user_id &&
+                        resolvedOwnerId &&
+                        String(a.user_id).trim().toLowerCase() === String(resolvedOwnerId).trim().toLowerCase()
+                      );
+                      const bIsOwner = Boolean(
+                        b.user_id &&
+                        resolvedOwnerId &&
+                        String(b.user_id).trim().toLowerCase() === String(resolvedOwnerId).trim().toLowerCase()
+                      );
+                      if (aIsOwner && !bIsOwner) return -1;
+                      if (!aIsOwner && bIsOwner) return 1;
+                      return 0;
+                    });
+
+                    return sortedOperators.map((op) => {
+                      const isCurrentUser = Boolean(
+                        (user?.user_id &&
+                          op.user_id &&
+                          String(op.user_id).trim().toLowerCase() ===
+                            String(user.user_id).trim().toLowerCase()) ||
+                        (user?.email &&
+                          op.email &&
+                          op.email.trim().toLowerCase() === user.email.trim().toLowerCase())
+                      );
+                      // Exactly 1 owner can ever be true in the entire store
+                      const isStoreOwner = Boolean(
+                        op.user_id &&
+                        resolvedOwnerId &&
+                        String(op.user_id).trim().toLowerCase() === String(resolvedOwnerId).trim().toLowerCase()
+                      );
+                      const canDelete = !isStoreOwner && !isCurrentUser;
 
                       return (
                         <View key={op.user_id} style={styles.memberCard}>
-                          <View style={styles.avatarThumb}>
-                            <Text style={styles.avatarText}>
-                              {(op.name || op.email || 'U')[0].toUpperCase()}
-                            </Text>
-                          </View>
+                          <UserAvatar
+                            uri={op.picture_url}
+                            name={op.name}
+                            email={op.email}
+                            size={38}
+                            style={{ marginRight: 12 }}
+                            backgroundColor="#EEF2FF"
+                            textStyle={{ color: '#4F46E5' }}
+                          />
                           <View style={styles.memberInfo}>
                             <View style={styles.nameRow}>
                               <Text style={styles.memberName} numberOfLines={1}>
@@ -367,25 +485,27 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
                             </View>
                           </View>
 
-                          {/* Do NOT show delete icon on store owner / current user; other admins and operators CAN be removed */}
+                          {/* Store Owner gets the Owner shield badge (NEVER deletable) */}
                           {isStoreOwner ? (
                             <View style={styles.ownerShieldBadge}>
                               <Ionicons name="shield-checkmark" size={13} color={Palette.emerald} />
                               <Text style={styles.ownerShieldText}>Owner</Text>
                             </View>
-                          ) : (
+                          ) : canDelete ? (
                             <TouchableOpacity
                               style={styles.removeActionBtn}
                               onPress={() => handleRemoveOperator(op)}
                               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              accessibilityLabel={`Remove ${op.name || op.email}`}
+                              testID={`remove-operator-${op.user_id}`}
                             >
                               <Ionicons name="trash-outline" size={17} color={Palette.rose} />
                             </TouchableOpacity>
-                          )}
+                          ) : null}
                         </View>
                       );
-                    })
-                  )}
+                    });
+                  })()}
                 </View>
 
                 {/* Pending Invitations List */}
@@ -416,8 +536,8 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
                           </Text>
                           <View style={styles.inviteMetaRow}>
                             <Badge
-                              label="Awaiting Login"
-                              variant="warning"
+                              label={inv.role === 'admin' ? 'Admin Pending' : 'Awaiting Login'}
+                              variant={inv.role === 'admin' ? 'purple' : 'warning'}
                               size="sm"
                             />
                             <Text style={styles.inviteNote}>
@@ -429,6 +549,8 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
                           style={styles.removeActionBtn}
                           onPress={() => handleRevokeInvitation(inv)}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityLabel={`Cancel invitation for ${inv.email}`}
+                          testID={`cancel-invitation-${inv.invitation_id}`}
                         >
                           <Ionicons name="close-circle-outline" size={20} color={Palette.rose} />
                         </TouchableOpacity>
@@ -450,6 +572,75 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
               style={{ width: '100%', borderRadius: 12 }}
             />
           </View>
+
+          {/* In-Modal Confirmation Dialog for Removing Staff or Revoking Invitation */}
+          {deleteConfirmation && (
+            <View style={styles.confirmOverlay}>
+              <View style={styles.confirmCard}>
+                <View style={styles.confirmIconCircle}>
+                  <Ionicons name="trash-outline" size={26} color={Palette.rose} />
+                </View>
+
+                <Text style={styles.confirmTitle}>
+                  {deleteConfirmation.type === 'operator'
+                    ? deleteConfirmation.role === 'admin'
+                      ? 'Remove Administrator?'
+                      : 'Remove Staff Access?'
+                    : 'Cancel Invitation?'}
+                </Text>
+
+                <Text style={styles.confirmMessage}>
+                  {deleteConfirmation.type === 'operator'
+                    ? `Are you sure you want to remove ${
+                        deleteConfirmation.role === 'admin' ? 'administrator access' : 'access'
+                      } for ${
+                        deleteConfirmation.name
+                          ? `${deleteConfirmation.name} (${deleteConfirmation.email})`
+                          : deleteConfirmation.email
+                      } from '${store?.name || 'Store'}'?`
+                    : `Are you sure you want to cancel the pending invitation for '${deleteConfirmation.email}'?`}
+                </Text>
+
+                <View style={styles.confirmNoteBox}>
+                  <Ionicons name="information-circle-outline" size={15} color="#B45309" style={{ marginRight: 6 }} />
+                  <Text style={styles.confirmNoteText}>
+                    {deleteConfirmation.type === 'operator'
+                      ? 'They will immediately lose access to this store.'
+                      : 'They will no longer be assigned to this store when they sign in.'}
+                  </Text>
+                </View>
+
+                <View style={styles.confirmButtonRow}>
+                  <TouchableOpacity
+                    style={styles.confirmCancelButton}
+                    onPress={() => setDeleteConfirmation(null)}
+                    disabled={isDeleting}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.confirmCancelButtonText}>Keep</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.confirmDeleteButton, isDeleting && styles.confirmDeleteButtonDisabled]}
+                    onPress={handleConfirmDelete}
+                    disabled={isDeleting}
+                    activeOpacity={0.8}
+                  >
+                    {isDeleting ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <View style={styles.confirmDeleteInner}>
+                        <Ionicons name="trash" size={15} color="#FFFFFF" />
+                        <Text style={styles.confirmDeleteButtonText}>
+                          {deleteConfirmation.type === 'operator' ? 'Remove Access' : 'Cancel Invite'}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
 
@@ -484,6 +675,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     maxHeight: '90%',
     overflow: 'hidden',
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
     ...Shadows.lg,
   },
   header: {
@@ -528,11 +722,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scrollArea: {
-    flexGrow: 0,
+    flex: 1,
+    flexShrink: 1,
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 16,
+    paddingBottom: 24,
+    flexGrow: 1,
   },
   addCard: {
     backgroundColor: Palette.surfaceLight,
@@ -631,6 +827,52 @@ const styles = StyleSheet.create({
   addButtonTextDisabled: {
     color: Palette.textMuted,
   },
+  roleSelectSection: {
+    marginTop: 12,
+  },
+  roleSelectLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Palette.textSecondary,
+    marginBottom: 6,
+  },
+  roleOptionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  roleOptionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+  },
+  roleOptionButtonActiveUser: {
+    backgroundColor: Palette.blueSoft,
+    borderColor: Palette.bluePrimary,
+  },
+  roleOptionButtonActiveAdmin: {
+    backgroundColor: '#F3E8FF',
+    borderColor: '#9333EA',
+  },
+  roleOptionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Palette.textSecondary,
+  },
+  roleOptionTextActiveUser: {
+    color: Palette.bluePrimary,
+    fontWeight: '700',
+  },
+  roleOptionTextActiveAdmin: {
+    color: '#7C3AED',
+    fontWeight: '700',
+  },
   tipBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -718,6 +960,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+  },
+  avatarThumbImage: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
   },
   avatarText: {
     color: '#4F46E5',
@@ -813,5 +1060,113 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Palette.borderLight,
     backgroundColor: '#FFFFFF',
+  },
+  confirmOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    zIndex: 1000,
+  },
+  confirmCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 22,
+    alignItems: 'center',
+    ...Shadows.lg,
+  },
+  confirmIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#FFF1F2',
+    borderWidth: 1.5,
+    borderColor: '#FECDD3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  confirmTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Palette.navyPrimary,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  confirmMessage: {
+    fontSize: 13,
+    color: Palette.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  confirmNoteBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 18,
+    width: '100%',
+  },
+  confirmNoteText: {
+    flex: 1,
+    fontSize: 11.5,
+    color: '#92400E',
+    lineHeight: 16,
+  },
+  confirmButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+  },
+  confirmCancelButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: Palette.surfaceLight,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmCancelButtonText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: Palette.textSecondary,
+  },
+  confirmDeleteButton: {
+    flex: 1.3,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: Palette.rose,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.sm,
+  },
+  confirmDeleteButtonDisabled: {
+    opacity: 0.6,
+  },
+  confirmDeleteInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  confirmDeleteButtonText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

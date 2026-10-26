@@ -578,7 +578,7 @@ describe('components/stores/StoreUsersModal.tsx', () => {
           user_id: 'other-user',
           email: 'other@saveshop.com',
           name: 'Other Staff',
-          role: 'admin',
+          role: 'user',
           created_at: '2026-01-01',
         },
       ],
@@ -598,6 +598,309 @@ describe('components/stores/StoreUsersModal.tsx', () => {
     expect(await screen.findByText('Owner Admin')).toBeDefined();
     expect(screen.getByText('Other Staff')).toBeDefined();
     expect(screen.getByText('Owner')).toBeDefined();
+    // Owner Admin must NOT have a delete button
+    expect(screen.queryByTestId('remove-operator-u-1')).toBeNull();
+    // Other Staff (role: user) MUST have a delete button
+    expect(screen.getByTestId('remove-operator-other-user')).toBeDefined();
+  });
+
+  it('prompts confirmation and removes active operator on UI delete click', async () => {
+    const onUpdatedMock = vi.fn();
+    vi.mocked(storeApi.getStoreOperators).mockResolvedValue({
+      store_id: 's-1',
+      store_name: 'Metro Save Shop',
+      operators: [
+        {
+          user_id: 'op-123',
+          email: 'cashier@saveshop.com',
+          name: 'Cashier Joe',
+          role: 'user',
+          created_at: '2026-01-01',
+        },
+      ],
+      invitations: [],
+    });
+
+    await act(async () => {
+      render(
+        <StoreUsersModal
+          visible={true}
+          store={mockStore}
+          onClose={() => {}}
+          onUpdated={onUpdatedMock}
+        />
+      );
+    });
+
+    expect(await screen.findByText('Cashier Joe')).toBeDefined();
+
+    // Click the delete button on active operator
+    const deleteBtn = screen.getByTestId('remove-operator-op-123');
+    await act(async () => {
+      fireEvent.click(deleteBtn);
+    });
+
+    // Confirmation dialog should appear with details
+    expect(screen.getByText('Remove Staff Access?')).toBeDefined();
+    expect(screen.getByText(/Are you sure you want to remove access for Cashier Joe/)).toBeDefined();
+
+    // Test "Keep" dismisses dialog
+    const keepBtn = screen.getByText('Keep');
+    await act(async () => {
+      fireEvent.click(keepBtn);
+    });
+    expect(screen.queryByText('Remove Staff Access?')).toBeNull();
+    expect(storeApi.removeStoreOperator).not.toHaveBeenCalledWith('s-1', 'op-123');
+
+    // Click delete again and confirm "Remove Access"
+    await act(async () => {
+      fireEvent.click(deleteBtn);
+    });
+    const confirmBtn = screen.getByText('Remove Access');
+    await act(async () => {
+      fireEvent.click(confirmBtn);
+    });
+
+    expect(storeApi.removeStoreOperator).toHaveBeenCalledWith('s-1', 'op-123');
+    expect(onUpdatedMock).toHaveBeenCalled();
+    expect(await screen.findByText('Staff Member Removed')).toBeDefined();
+  });
+
+  it('prompts confirmation and cancels pending invitation on UI delete click', async () => {
+    const onUpdatedMock = vi.fn();
+    vi.mocked(storeApi.getStoreOperators).mockResolvedValue({
+      store_id: 's-1',
+      store_name: 'Metro Save Shop',
+      operators: [],
+      invitations: [
+        {
+          invitation_id: 'inv-456',
+          store_id: 's-1',
+          email: 'pendingclerk@saveshop.com',
+          role: 'user',
+          status: 'pending',
+          created_at: '2026-01-01',
+        },
+      ],
+    });
+
+    await act(async () => {
+      render(
+        <StoreUsersModal
+          visible={true}
+          store={mockStore}
+          onClose={() => {}}
+          onUpdated={onUpdatedMock}
+        />
+      );
+    });
+
+    expect(await screen.findByText('pendingclerk@saveshop.com')).toBeDefined();
+
+    // Click cancel invitation button
+    const cancelInviteBtn = screen.getByTestId('cancel-invitation-inv-456');
+    await act(async () => {
+      fireEvent.click(cancelInviteBtn);
+    });
+
+    // Confirmation dialog should appear
+    expect(screen.getByText('Cancel Invitation?')).toBeDefined();
+    expect(screen.getByText(/Are you sure you want to cancel the pending invitation for 'pendingclerk@saveshop.com'/)).toBeDefined();
+
+    // Confirm cancellation
+    const confirmBtn = screen.getByText('Cancel Invite');
+    await act(async () => {
+      fireEvent.click(confirmBtn);
+    });
+
+    expect(storeApi.revokeStoreInvitation).toHaveBeenCalledWith('s-1', 'inv-456');
+    expect(onUpdatedMock).toHaveBeenCalled();
+    expect(await screen.findByText('Invitation Cancelled')).toBeDefined();
+  });
+
+  it('allows store creator/owner to remove an added administrator (role: admin) while protecting owner from deletion', async () => {
+    const onUpdatedMock = vi.fn();
+    vi.mocked(storeApi.getStoreOperators).mockResolvedValueOnce({
+      store_id: 's-100',
+      store_name: 'Flagship Mart',
+      owner_id: 'owner-akash12',
+      operators: [
+        {
+          user_id: 'owner-akash12',
+          email: 'akashbapibag12@gmail.com',
+          name: 'Akash 12 Owner',
+          role: 'admin',
+          is_owner: true,
+          created_at: '2026-01-01',
+        },
+        {
+          user_id: 'admin-akash9',
+          email: 'akashbapibag9@gmail.com',
+          name: 'Akash 9 Added Admin',
+          role: 'admin',
+          is_owner: false,
+          created_at: '2026-01-01',
+        },
+      ],
+      invitations: [],
+    });
+
+    await act(async () => {
+      render(
+        <StoreUsersModal
+          visible={true}
+          store={{
+            ...mockStore,
+            store_id: 's-100',
+            name: 'Flagship Mart',
+            owner_id: 'owner-akash12',
+            email: 'akashbapibag12@gmail.com',
+          }}
+          onClose={() => {}}
+          onUpdated={onUpdatedMock}
+        />
+      );
+    });
+
+    expect(await screen.findByText('Akash 12 Owner')).toBeDefined();
+    expect(screen.getByText('Akash 9 Added Admin')).toBeDefined();
+
+    // Owner has Owner shield badge and NO delete button
+    expect(screen.getByText('Owner')).toBeDefined();
+    expect(screen.queryByTestId('remove-operator-owner-akash12')).toBeNull();
+
+    // Added Admin B has a delete button because they are NOT the store owner
+    const removeAdminBtn = screen.getByTestId('remove-operator-admin-akash9');
+    expect(removeAdminBtn).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(removeAdminBtn);
+    });
+
+    // Confirmation dialog should specifically specify "Remove Administrator?"
+    expect(screen.getByText('Remove Administrator?')).toBeDefined();
+    expect(
+      screen.getByText(/Are you sure you want to remove administrator access for Akash 9 Added Admin/)
+    ).toBeDefined();
+
+    // Confirm deletion of the added administrator
+    const confirmBtn = screen.getByText('Remove Access');
+    await act(async () => {
+      fireEvent.click(confirmBtn);
+    });
+
+    expect(storeApi.removeStoreOperator).toHaveBeenCalledWith('s-100', 'admin-akash9');
+    expect(onUpdatedMock).toHaveBeenCalled();
+    expect(await screen.findByText('Administrator Removed')).toBeDefined();
+  });
+
+  it('allows selecting Store Admin role and submits role admin when adding staff', async () => {
+    const onUpdatedMock = vi.fn();
+    vi.mocked(storeApi.getStoreOperators).mockResolvedValueOnce({
+      store_id: 's-1',
+      store_name: 'Metro Save Shop',
+      operators: [],
+      invitations: [],
+    });
+
+    await act(async () => {
+      render(
+        <StoreUsersModal
+          visible={true}
+          store={mockStore}
+          onClose={() => {}}
+          onUpdated={onUpdatedMock}
+        />
+      );
+    });
+
+    // Select the "Store Admin" role pill
+    const adminRoleBtn = screen.getByText('Store Admin');
+    await act(async () => {
+      fireEvent.click(adminRoleBtn);
+    });
+
+    // Enter email address
+    const emailInput = screen.getByPlaceholderText('cashier@example.com');
+    await act(async () => {
+      fireEvent.change(emailInput, { target: { value: 'newadmin@saveshop.com' } });
+    });
+
+    // Click Add
+    const addBtn = screen.getByText('Add');
+    await act(async () => {
+      fireEvent.click(addBtn);
+    });
+
+    expect(storeApi.addStoreOperator).toHaveBeenCalledWith('s-1', {
+      email: 'newadmin@saveshop.com',
+      role: 'admin',
+    });
+  });
+
+  it('enforces strictly 1 owner shield badge in UI even when multiple admins exist', async () => {
+    vi.mocked(storeApi.getStoreOperators).mockResolvedValueOnce({
+      store_id: 's-multi',
+      store_name: 'Multi Admin Mart',
+      owner_id: 'sole-owner-id',
+      operators: [
+        {
+          user_id: 'sole-owner-id',
+          email: 'soleowner@saveshop.com',
+          name: 'The Sole Owner',
+          role: 'admin',
+          is_owner: true,
+          created_at: '2026-01-01',
+        },
+        {
+          user_id: 'admin-2-id',
+          email: 'admin2@saveshop.com',
+          name: 'Admin Two',
+          role: 'admin',
+          is_owner: false,
+          created_at: '2026-01-01',
+        },
+        {
+          user_id: 'admin-3-id',
+          email: 'admin3@saveshop.com',
+          name: 'Admin Three',
+          role: 'admin',
+          is_owner: false,
+          created_at: '2026-01-01',
+        },
+      ],
+      invitations: [],
+    });
+
+    await act(async () => {
+      render(
+        <StoreUsersModal
+          visible={true}
+          store={{
+            ...mockStore,
+            store_id: 's-multi',
+            name: 'Multi Admin Mart',
+            owner_id: 'sole-owner-id',
+          }}
+          onClose={() => {}}
+        />
+      );
+    });
+
+    expect(await screen.findByText('The Sole Owner')).toBeDefined();
+    expect(screen.getByText('Admin Two')).toBeDefined();
+    expect(screen.getByText('Admin Three')).toBeDefined();
+
+    // Verify there is EXACTLY 1 "Owner" badge across the entire modal
+    const ownerBadges = screen.getAllByText('Owner');
+    expect(ownerBadges.length).toBe(1);
+
+    // Sole owner has NO delete button
+    expect(screen.queryByTestId('remove-operator-sole-owner-id')).toBeNull();
+
+    // Other admins MUST have delete buttons
+    expect(screen.getByTestId('remove-operator-admin-2-id')).toBeDefined();
+    expect(screen.getByTestId('remove-operator-admin-3-id')).toBeDefined();
   });
 });
 

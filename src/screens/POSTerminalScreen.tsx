@@ -24,6 +24,8 @@ import { POSCategoryBar } from '@/components/pos/POSCategoryBar';
 import { POSCartSummaryBar } from '@/components/pos/POSCartSummaryBar';
 import { POSCartDrawer } from '@/components/pos/POSCartDrawer';
 import { POSCheckoutModal } from '@/components/pos/POSCheckoutModal';
+import { OfflineScreen } from '@/components/ui/OfflineScreen';
+import { useNetworkStatus } from '@/context/NetworkContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
 interface POSTerminalScreenProps {
@@ -32,6 +34,7 @@ interface POSTerminalScreenProps {
 
 export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigateToSales }) => {
   const { activeStore } = useAuth();
+  const { isOffline } = useNetworkStatus();
   const insets = useSafeAreaInsets();
   const safeTop = Math.max(insets.top, Platform.OS === 'android' ? 28 : 12);
 
@@ -344,6 +347,15 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Palette.bluePrimary} />
           <Text style={styles.loadingText}>Loading inventory products...</Text>
+        </View>
+      ) : isOffline && products.length === 0 ? (
+        <View style={styles.centerContainer}>
+          <OfflineScreen
+            compact
+            title="Catalog Offline"
+            message="Your product catalog could not be downloaded because the device is offline. Check your connection to load inventory."
+            onRetry={() => loadProducts(true)}
+          />
         </View>
       ) : filteredProducts.length === 0 ? (
         <View style={styles.centerContainer}>

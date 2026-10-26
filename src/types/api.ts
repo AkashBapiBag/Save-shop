@@ -19,6 +19,7 @@ export interface LoginRequest {
   email?: string;
   name?: string;
   role?: UserRole | string;
+  picture_url?: string | null;
 }
 
 export interface LoginResponse {
@@ -44,6 +45,7 @@ export interface StoreOperator {
   name: string;
   role: string;
   picture_url?: string | null;
+  is_owner?: boolean;
   created_at: string;
 }
 
@@ -58,6 +60,7 @@ export interface StoreInvitation {
 
 export interface StoreMembersOverview {
   store_id: string;
+  owner_id?: string | null;
   store_name: string;
   operators: StoreOperator[];
   members?: StoreOperator[];
@@ -85,6 +88,7 @@ export interface IndianState {
 
 export interface Store {
   store_id: string;
+  owner_id?: string | null;
   name: string;
   owner_name?: string | null;
   phone_number?: string | null;

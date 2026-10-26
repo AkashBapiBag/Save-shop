@@ -7,12 +7,15 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { Store, IndianState, StoreCreateRequest, StoreUpdateRequest } from '@/types/api';
 import { storeApi } from '@/services/api';
 import { Palette } from '@/theme/designSystem';
+import { Badge } from '@/components/ui/Badge';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { StoreCard } from '@/components/stores/StoreCard';
 import { IndianStatePickerModal } from '@/components/stores/IndianStatePickerModal';
 import { SignatureUploadModal } from '@/components/stores/SignatureUploadModal';
@@ -20,10 +23,13 @@ import { CreateStoreModal } from '@/components/stores/CreateStoreModal';
 import { EditStoreModal } from '@/components/stores/EditStoreModal';
 import { StoreUsersModal } from '@/components/stores/StoreUsersModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
+import { OfflineScreen } from '@/components/ui/OfflineScreen';
+import { useNetworkStatus } from '@/context/NetworkContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
 export const StoreManagementScreen: React.FC = () => {
   const { stores, activeStore, switchStore, refreshStores, refreshUser, user, isAdmin } = useAuth();
+  const { isOffline } = useNetworkStatus();
 
   // Modals state
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -212,8 +218,44 @@ export const StoreManagementScreen: React.FC = () => {
         )}
       </View>
 
+      {/* Active User Google Profile Banner */}
+      <View style={styles.userProfileBanner}>
+        <UserAvatar
+          uri={user?.picture_url}
+          name={user?.name}
+          email={user?.email}
+          size={38}
+          showGoogleBadge={false}
+        />
+        <View style={{ flex: 1, minWidth: 0, marginHorizontal: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.userBannerName} numberOfLines={1}>
+              {user?.name || 'Staff User'}
+            </Text>
+            <Ionicons name="logo-google" size={13} color="#4285F4" />
+          </View>
+          <Text style={styles.userBannerEmail} numberOfLines={1}>
+            {user?.email}
+          </Text>
+        </View>
+        <Badge
+          label={isAdmin ? 'ADMINISTRATOR' : 'STORE OPERATOR'}
+          variant={isAdmin ? 'purple' : 'primary'}
+          size="sm"
+        />
+      </View>
+
       {/* Stores List */}
-      {isLoadingStates && stores.length === 0 ? (
+      {isOffline && stores.length === 0 ? (
+        <View style={styles.center}>
+          <OfflineScreen
+            compact
+            title="Store Profiles Offline"
+            message="Store management requires an active network connection to fetch and configure tenant stores."
+            onRetry={refreshStores}
+          />
+        </View>
+      ) : isLoadingStates && stores.length === 0 ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Palette.navyPrimary} />
           <Text style={styles.loadingText}>Loading stores...</Text>
@@ -377,6 +419,45 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 12,
     marginLeft: 4,
+  },
+  userProfileBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Palette.borderLight,
+  },
+  userBannerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Palette.navyPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
+  userBannerAvatarImg: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+  },
+  userBannerAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  userBannerName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Palette.textPrimary,
+  },
+  userBannerEmail: {
+    fontSize: 11,
+    color: Palette.textSecondary,
+    marginTop: 1,
   },
   listContent: {
     padding: 16,

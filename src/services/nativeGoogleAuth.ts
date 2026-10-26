@@ -3,6 +3,14 @@ import { Platform } from 'react-native';
 export interface NativeSignInResult {
   success: boolean;
   idToken?: string;
+  user?: {
+    id?: string;
+    name?: string | null;
+    email?: string;
+    photo?: string | null;
+    familyName?: string | null;
+    givenName?: string | null;
+  };
   cancelled?: boolean;
   error?: string;
 }

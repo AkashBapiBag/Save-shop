@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { APIError } from '@/services/api';
 
 export interface FormattedError {
@@ -83,7 +83,8 @@ export function showErrorAlert(
   fallbackMessage = 'Please verify connection and try again.'
 ): void {
   const parsed = formatError(error, customTitle || 'Operation Failed');
-  Alert.alert(parsed.title, parsed.message || fallbackMessage);
+  const message = parsed.message || fallbackMessage;
+  Alert.alert(parsed.title, message);
 }
 
 /**

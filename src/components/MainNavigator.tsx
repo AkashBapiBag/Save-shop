@@ -8,6 +8,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '@/components/ui/AppHeader';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { POSTerminalScreen } from '@/screens/POSTerminalScreen';
 import { InventoryScreen } from '@/screens/InventoryScreen';
 import { DashboardScreen } from '@/screens/DashboardScreen';
@@ -56,7 +57,11 @@ export const MainNavigator: React.FC = () => {
       <AppHeader />
 
       {/* Screen Content */}
-      <View style={styles.contentArea}>{renderActiveScreen()}</View>
+      <View style={styles.contentArea}>
+        <ErrorBoundary key={activeTab}>
+          {renderActiveScreen()}
+        </ErrorBoundary>
+      </View>
 
       {/* Modern Bottom Tab Bar */}
       <View

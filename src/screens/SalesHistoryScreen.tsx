@@ -16,6 +16,8 @@ import { billingApi } from '@/services/api';
 import { Palette, Shadows } from '@/theme/designSystem';
 import { Badge } from '@/components/ui/Badge';
 import { TaxInvoiceModal } from '@/components/TaxInvoiceModal';
+import { OfflineScreen } from '@/components/ui/OfflineScreen';
+import { useNetworkStatus } from '@/context/NetworkContext';
 import { logError } from '@/utils/errorHandler';
 
 type DateFilterKey = 'all' | 'today' | 'yesterday' | 'this_week' | 'this_month';
@@ -30,6 +32,7 @@ const DATE_FILTERS: { key: DateFilterKey; label: string }[] = [
 
 export const SalesHistoryScreen: React.FC = () => {
   const { activeStore } = useAuth();
+  const { isOffline } = useNetworkStatus();
 
   const [transactions, setTransactions] = useState<TransactionResponse[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -328,6 +331,15 @@ export const SalesHistoryScreen: React.FC = () => {
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Palette.bluePrimary} />
           <Text style={styles.loadingText}>Loading sales records...</Text>
+        </View>
+      ) : isOffline && transactions.length === 0 ? (
+        <View style={styles.centerContainer}>
+          <OfflineScreen
+            compact
+            title="Sales History Offline"
+            message="Past sales transactions cannot be fetched while offline. Connect to internet and tap retry."
+            onRetry={fetchSales}
+          />
         </View>
       ) : transactions.length === 0 ? (
         <View style={styles.centerContainer}>

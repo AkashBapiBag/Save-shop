@@ -16,6 +16,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AuthSession from 'expo-auth-session';
 import { useAuth } from '@/context/AuthContext';
+import { useNetworkStatus } from '@/context/NetworkContext';
 import {
   configureGoogleSignIn,
   isNativeGoogleSignInAvailable,
@@ -44,8 +45,33 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
   WebBrowser.maybeCompleteAuthSession();
 }
 
+// Helper to safely parse claims from a JWT token (e.g. Google id_token)
+function extractClaimsFromIdToken(idToken?: string): { name?: string; picture?: string } {
+  if (!idToken) return {};
+  try {
+    const parts = idToken.split('.');
+    if (parts.length === 3) {
+      const base64Url = parts[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonStr = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      const payload = JSON.parse(jsonStr);
+      return {
+        name: payload.name || undefined,
+        picture: payload.picture || payload.picture_url || payload.avatar_url || undefined,
+      };
+    }
+  } catch {}
+  return {};
+}
+
 export const LoginScreen: React.FC = () => {
   const { login, isLoading } = useAuth();
+  const { isOffline } = useNetworkStatus();
   const [error, setError] = useState<string | null>(null);
 
   // Client IDs from environment
@@ -88,13 +114,20 @@ export const LoginScreen: React.FC = () => {
   });
 
   const handleTokenExchange = useCallback(
-    async (token: string, idToken?: string, accessToken?: string) => {
+    async (token: string, idToken?: string, accessToken?: string, pictureUrl?: string, name?: string) => {
       setError(null);
       try {
+        const tokenToInspect = idToken || (token.split('.').length === 3 ? token : undefined);
+        const claims = extractClaimsFromIdToken(tokenToInspect);
+        const finalPicture = pictureUrl || claims.picture;
+        const finalName = name || claims.name;
+
         await login({
           google_token: token,
           id_token: idToken,
           access_token: accessToken,
+          picture_url: finalPicture,
+          name: finalName,
         });
       } catch (err: any) {
         const msg = err?.message || 'Unable to sign in. Please try again.';
@@ -161,6 +194,11 @@ export const LoginScreen: React.FC = () => {
   const handleGoogleSignIn = async () => {
     setError(null);
 
+    if (isOffline) {
+      setError('Device is offline. Please connect to Wi-Fi or mobile data to sign in.');
+      return;
+    }
+
     if (!isGoogleConfigured) {
       Alert.alert(
         'Sign In Unavailable',
@@ -175,7 +213,13 @@ export const LoginScreen: React.FC = () => {
       try {
         const nativeResult = await signInWithNativeGoogle();
         if (nativeResult.success && nativeResult.idToken) {
-          await handleTokenExchange(nativeResult.idToken, nativeResult.idToken);
+          await handleTokenExchange(
+            nativeResult.idToken,
+            nativeResult.idToken,
+            undefined,
+            nativeResult.user?.photo || undefined,
+            nativeResult.user?.name || undefined
+          );
           return;
         }
         if (nativeResult.cancelled) {

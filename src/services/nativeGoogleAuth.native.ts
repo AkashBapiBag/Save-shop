@@ -3,6 +3,14 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 export interface NativeSignInResult {
   success: boolean;
   idToken?: string;
+  user?: {
+    id?: string;
+    name?: string | null;
+    email?: string;
+    photo?: string | null;
+    familyName?: string | null;
+    givenName?: string | null;
+  };
   cancelled?: boolean;
   error?: string;
 }
@@ -55,6 +63,16 @@ export async function signInWithNativeGoogle(): Promise<NativeSignInResult> {
       return {
         success: true,
         idToken,
+        user: response.data.user
+          ? {
+              id: response.data.user.id,
+              name: response.data.user.name,
+              email: response.data.user.email,
+              photo: response.data.user.photo,
+              familyName: response.data.user.familyName,
+              givenName: response.data.user.givenName,
+            }
+          : undefined,
       };
     } else if (response.type === 'cancelled') {
       return {
