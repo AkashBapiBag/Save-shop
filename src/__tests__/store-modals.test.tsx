@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 import { CreateStoreModal } from '@/components/stores/CreateStoreModal';
 import { EditStoreModal } from '@/components/stores/EditStoreModal';
 import { SignatureUploadModal } from '@/components/stores/SignatureUploadModal';
+import { StoreUsersModal } from '@/components/stores/StoreUsersModal';
 import { CreateProductModal } from '@/components/inventory/CreateProductModal';
 import { ReceiveStockModal } from '@/components/inventory/ReceiveStockModal';
 import { StoreManagementScreen } from '@/screens/StoreManagementScreen';
@@ -57,6 +58,35 @@ vi.mock('@/services/api', async (importOriginal) => {
       createStore: vi.fn().mockResolvedValue(mockStore),
       updateStore: vi.fn().mockResolvedValue(mockStore),
       uploadSignature: vi.fn().mockResolvedValue({ success: true }),
+      getStoreOperators: vi.fn().mockResolvedValue({
+        store_id: 's-1',
+        store_name: 'Metro Save Shop',
+        operators: [
+          {
+            user_id: 'u-1',
+            email: 'alice@saveshop.com',
+            name: 'Alice Cashier',
+            role: 'user',
+            created_at: '2026-01-01',
+          },
+        ],
+        invitations: [
+          {
+            invitation_id: 'inv-1',
+            store_id: 's-1',
+            email: 'pending@saveshop.com',
+            role: 'user',
+            status: 'pending',
+            created_at: '2026-01-01',
+          },
+        ],
+      }),
+      addStoreOperator: vi.fn().mockResolvedValue({
+        status: 'invited',
+        message: 'Invitation recorded successfully.',
+      }),
+      removeStoreOperator: vi.fn().mockResolvedValue({ success: true, message: 'Removed' }),
+      revokeStoreInvitation: vi.fn().mockResolvedValue({ success: true, message: 'Revoked' }),
     },
     authApi: {
       ...actual.authApi,
@@ -462,3 +492,73 @@ describe('screens/StoreManagementScreen.tsx', () => {
     expect(await screen.findByText('Store Directory')).toBeDefined();
   });
 });
+
+describe('components/stores/StoreUsersModal.tsx', () => {
+  it('renders store operators and pending invitations, and submits new invite by email', async () => {
+    const alertSpy = vi.spyOn(Alert, 'alert');
+    const onCloseMock = vi.fn();
+    const onUpdatedMock = vi.fn();
+
+    await act(async () => {
+      render(
+        <StoreUsersModal
+          visible={true}
+          store={mockStore}
+          onClose={onCloseMock}
+          onUpdated={onUpdatedMock}
+        />
+      );
+    });
+
+    // Verify existing operator and pending invite rendered
+    expect(await screen.findByText('alice@saveshop.com')).toBeDefined();
+    expect(screen.getByText('pending@saveshop.com')).toBeDefined();
+    expect(screen.getByText('Awaiting Login')).toBeDefined();
+
+    // Fill new email and click Add
+    const emailInput = screen.getByPlaceholderText('cashier@example.com');
+    await act(async () => {
+      fireEvent.change(emailInput, { target: { value: 'bob@saveshop.com' } });
+    });
+
+    const addBtn = screen.getByText('Add');
+    await act(async () => {
+      fireEvent.click(addBtn);
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Invitation Saved',
+      'Invitation recorded successfully.'
+    );
+  });
+
+  it('rejects invalid or empty email address with alert', async () => {
+    const alertSpy = vi.spyOn(Alert, 'alert');
+
+    await act(async () => {
+      render(
+        <StoreUsersModal
+          visible={true}
+          store={mockStore}
+          onClose={() => {}}
+        />
+      );
+    });
+
+    const emailInput = screen.getByPlaceholderText('cashier@example.com');
+    await act(async () => {
+      fireEvent.change(emailInput, { target: { value: 'invalid-email-format' } });
+    });
+
+    const addBtn = screen.getByText('Add');
+    await act(async () => {
+      fireEvent.click(addBtn);
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Invalid Email',
+      'Please enter a valid email address format.'
+    );
+  });
+});
+

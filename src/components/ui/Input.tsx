@@ -70,6 +70,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 46,
+    overflow: 'hidden',
   },
   inputError: {
     borderColor: Palette.rose,
@@ -79,15 +80,19 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginRight: 8,
+    flexShrink: 0,
   },
   rightContainer: {
     marginLeft: 8,
+    flexShrink: 0,
   },
   input: {
     flex: 1,
+    minWidth: 0,
     color: Palette.textPrimary,
     fontSize: 14,
     height: '100%',
+    paddingVertical: 0,
   },
   errorText: {
     fontSize: 11,

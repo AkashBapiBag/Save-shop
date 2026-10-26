@@ -168,7 +168,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
         const errorLines = res.errors.map((e) => `• ${e.message}`).join('\n');
         Alert.alert(
           'Insufficient Stock',
-          `Cannot proceed to checkout. Store inventory does not have enough stock:\n\n${errorLines}`
+          `Cannot proceed to checkout. Not enough stock available:\n\n${errorLines}`
         );
         return;
       }
@@ -238,7 +238,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
       setTaxInvoiceVisible(true);
       void loadProducts(false);
     } catch (err: unknown) {
-      showErrorAlert(err, 'Checkout Error', 'Transaction could not be completed. Please check your network connection.');
+      showErrorAlert(err, 'Checkout Error', 'Transaction could not be completed. Please check your connection.');
     } finally {
       setIsProcessingCheckout(false);
     }
@@ -252,9 +252,9 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
           <View style={styles.headerIconCircle}>
             <Ionicons name="receipt-outline" size={18} color={Palette.bluePrimary} />
           </View>
-          <View style={{ marginLeft: 8 }}>
-            <Text style={styles.screenHeaderTitle}>Billing Counter</Text>
-            <Text style={styles.screenHeaderSub}>{activeStore?.name || 'Save Shop'}</Text>
+          <View style={{ marginLeft: 8, flex: 1, minWidth: 0 }}>
+            <Text style={styles.screenHeaderTitle} numberOfLines={1}>Billing Counter</Text>
+            <Text style={styles.screenHeaderSub} numberOfLines={1}>{activeStore?.name || 'Save Shop'}</Text>
           </View>
         </View>
 
@@ -315,7 +315,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
 
       {/* Filter Status Bar */}
       <View style={styles.filterStatusBar}>
-        <Text style={styles.filterStatusSummary}>
+        <Text style={styles.filterStatusSummary} numberOfLines={1} ellipsizeMode="tail">
           {selectedCategory !== 'All' ? (
             <>
               Category: <Text style={styles.filterStatusStrong}>{selectedCategory}</Text> • {filteredProducts.length} product{filteredProducts.length === 1 ? '' : 's'}
@@ -522,6 +522,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Palette.textPrimary,
     paddingVertical: 0,
+    minWidth: 0,
   },
   filterStatusBar: {
     flexDirection: 'row',

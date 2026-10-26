@@ -144,9 +144,9 @@ export const EditStoreModal: React.FC<EditStoreModalProps> = ({
       >
         <View style={styles.modalCardLarge}>
           <View style={styles.modalHeader}>
-            <View>
-              <Text style={styles.modalTitle}>Edit Store Profile</Text>
-              <Text style={styles.modalSub}>{store.name}</Text>
+            <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+              <Text style={styles.modalTitle} numberOfLines={1}>Edit Store Profile</Text>
+              <Text style={styles.modalSub} numberOfLines={1}>{store.name}</Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Ionicons name="close" size={24} color={Palette.textSecondary} />
@@ -160,7 +160,7 @@ export const EditStoreModal: React.FC<EditStoreModalProps> = ({
           >
             {/* Square Logo Section */}
             <View style={styles.formSection}>
-              <Text style={styles.sectionLabel}>Store Logo (Square 1:1)</Text>
+              <Text style={styles.sectionLabel}>Store Logo</Text>
               <View style={styles.imagePickerRow}>
                 <View style={styles.squareLogoPreviewContainer}>
                   {logoPreviewUri ? (
@@ -172,7 +172,7 @@ export const EditStoreModal: React.FC<EditStoreModalProps> = ({
                   ) : (
                     <View style={styles.squareEmptyBox}>
                       <Ionicons name="image-outline" size={30} color={Palette.textMuted} />
-                      <Text style={styles.squareEmptyText}>1:1 Square</Text>
+                      <Text style={styles.squareEmptyText}>Add Logo</Text>
                     </View>
                   )}
                 </View>

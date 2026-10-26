@@ -63,7 +63,7 @@ export const POSCartDrawer: React.FC<POSCartDrawerProps> = ({
         <View style={[styles.drawerHeader, { paddingTop: safeTop + 8 }]}>
           <View>
             <Text style={styles.drawerTitle}>Order Cart ({totalCartCount} items)</Text>
-            <Text style={styles.drawerSubtitle}>Set line cashback & subtotal discount</Text>
+            <Text style={styles.drawerSubtitle}>Review items & apply discounts</Text>
           </View>
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="close-circle" size={26} color={Palette.textSecondary} />
@@ -79,8 +79,8 @@ export const POSCartDrawer: React.FC<POSCartDrawerProps> = ({
             return (
               <View key={item.product.product_id} style={styles.cartItemRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.cartItemName}>{item.product.name}</Text>
-                  <Text style={styles.cartItemRate}>
+                  <Text style={styles.cartItemName} numberOfLines={2}>{item.product.name}</Text>
+                  <Text style={styles.cartItemRate} numberOfLines={1}>
                     ₹ {item.unit_price.toFixed(2)} / {item.product.default_unit} • Subtotal: ₹ {lineBase.toFixed(2)}
                   </Text>
                   <Text style={styles.cartStockAlertText}>Available Stock: {maxStock} {item.product.default_unit}</Text>
@@ -195,7 +195,7 @@ export const POSCartDrawer: React.FC<POSCartDrawerProps> = ({
 
             {calculation.totalCashback > 0 && (
               <View style={styles.breakdownRow}>
-                <Text style={[styles.breakdownLabel, { color: Palette.bluePrimary }]}>Total Cashback Given</Text>
+                <Text style={[styles.breakdownLabel, { color: Palette.bluePrimary }]}>Total Cashback</Text>
                 <Text style={[styles.breakdownValue, { color: Palette.bluePrimary }]}>
                   +₹ {calculation.totalCashback.toFixed(2)}
                 </Text>

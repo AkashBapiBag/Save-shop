@@ -233,7 +233,7 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalTitle}>Receive Stock</Text>
                 <Text style={styles.modalSub}>
-                  {storeName || 'Active Store'} • Stock Inward Operations
+                  {storeName || 'Active Store'} • Add Stock
                 </Text>
               </View>
               <TouchableOpacity
@@ -260,7 +260,7 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
                   style={{ marginRight: 6 }}
                 />
                 <Text style={[styles.modeTabText, receiveMode === 'single' && styles.modeTabTextActive]}>
-                  Single Item Inward
+                  Single Item
                 </Text>
               </TouchableOpacity>
 
@@ -297,7 +297,7 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
                   keyboardShouldPersistTaps="handled"
                 >
                   <ProductSelectTrigger
-                    label="Product to Replenish *"
+                    label="Product *"
                     product={singleSelectedProduct}
                     onPress={() => {
                       setProductPickerTarget('single');
@@ -308,7 +308,7 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
                   {/* Batch Lot Identifier */}
                   <View style={{ marginBottom: 12 }}>
                     <View style={styles.labelWithActionRow}>
-                      <Text style={styles.inputLabel}>Batch / Lot Identifier *</Text>
+                      <Text style={styles.inputLabel}>Batch Number *</Text>
                       <TouchableOpacity
                         style={styles.autoGenPill}
                         onPress={() => {
@@ -318,7 +318,7 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
                         }}
                       >
                         <Ionicons name="sparkles-outline" size={12} color={Palette.bluePrimary} />
-                        <Text style={styles.autoGenText}>Auto-Gen Unique ID</Text>
+                        <Text style={styles.autoGenText}>Generate Batch ID</Text>
                       </TouchableOpacity>
                     </View>
                     <Input
@@ -533,7 +533,7 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
                           </Text>
                         </View>
                         <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={styles.summaryLabel}>Total Consignment Value</Text>
+                          <Text style={styles.summaryLabel}>Total Value</Text>
                           <Text style={[styles.summaryValue, { color: Palette.emerald }]}>
                             ₹{consignmentTotalCost.toFixed(2)}
                           </Text>
@@ -791,6 +791,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   labelWithActionRow: {
+    flexWrap: 'wrap',
+    gap: 4,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

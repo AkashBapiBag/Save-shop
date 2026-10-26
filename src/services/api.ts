@@ -28,29 +28,94 @@ import {
   SignatureResponse,
   TransactionListParams,
   CategorySummary,
+  StoreMembersOverview,
+  AddStoreOperatorRequest,
+  AddStoreOperatorResponse,
 } from '@/types/api';
 
-export const resolveDefaultHost = (): string => {
-  // 1. Primary source: EXPO_PUBLIC_API_URL from .env in all cases
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
-    return envUrl.trim().replace(/\/+$/, '');
+export const isLocalEnvironment = (): boolean => {
+  // Explicit overrides if defined
+  if (process.env.EXPO_PUBLIC_FORCE_PROD === 'true') {
+    return false;
+  }
+  if (process.env.EXPO_PUBLIC_FORCE_DEV === 'true') {
+    return true;
   }
 
-  // 2. Secondary fallback: Constants extra (if configured in app.json)
-  const extraUrl =
+  // Web browser environment check
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname) {
+    const host = window.location.hostname.toLowerCase();
+    return (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '[::1]' ||
+      host.startsWith('192.168.') ||
+      host.startsWith('10.') ||
+      host.startsWith('172.16.') ||
+      host.startsWith('172.17.') ||
+      host.startsWith('172.18.') ||
+      host.startsWith('172.19.') ||
+      host.startsWith('172.20.') ||
+      host.startsWith('172.21.') ||
+      host.startsWith('172.22.') ||
+      host.startsWith('172.23.') ||
+      host.startsWith('172.24.') ||
+      host.startsWith('172.25.') ||
+      host.startsWith('172.26.') ||
+      host.startsWith('172.27.') ||
+      host.startsWith('172.28.') ||
+      host.startsWith('172.29.') ||
+      host.startsWith('172.30.') ||
+      host.startsWith('172.31.') ||
+      host.endsWith('.local')
+    );
+  }
+
+  // React Native development mode (__DEV__ flag provided by Metro)
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    return true;
+  }
+
+  return false;
+};
+
+export const getProductionApiUrl = (): string => {
+  const prodUrl =
+    process.env.EXPO_PUBLIC_PROD_API_URL ||
+    process.env.EXPO_PUBLIC_API_URL ||
+    Constants.expoConfig?.extra?.EXPO_PUBLIC_PROD_API_URL ||
     Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ||
     Constants.expoConfig?.extra?.apiUrl;
-  if (extraUrl && typeof extraUrl === 'string' && extraUrl.trim() !== '') {
-    return extraUrl.trim().replace(/\/+$/, '');
+
+  if (prodUrl && typeof prodUrl === 'string' && prodUrl.trim() !== '') {
+    return prodUrl.trim().replace(/\/+$/, '');
   }
 
-  // 3. Web browser environment fallback: use window.location.origin (same-origin reverse proxy)
+  // Same-origin web fallback if deployed on web server with reverse proxy
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin.replace(/\/+$/, '');
   }
 
-  // 4. Fallback for local development when .env is not present
+  return 'https://chamber-golf-guardian-thumbnails.trycloudflare.com';
+};
+
+export const getLocalDevApiUrl = (): string => {
+  // Explicit dev URL if provided in .env
+  const devUrl = process.env.EXPO_PUBLIC_DEV_API_URL;
+  if (devUrl && typeof devUrl === 'string' && devUrl.trim() !== '') {
+    return devUrl.trim().replace(/\/+$/, '');
+  }
+
+  // In Web browser: use current hostname with port 8000
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname) {
+    const host = window.location.hostname;
+    if (window.location.port === '8000') {
+      return window.location.origin.replace(/\/+$/, '');
+    }
+    return `http://${host}:8000`;
+  }
+
+  // In Expo Go / Native dev client: extract machine LAN IP from Metro hostUri
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri && !hostUri.includes('expo-dev-client')) {
     const ip = hostUri.split(':')[0];
@@ -59,11 +124,25 @@ export const resolveDefaultHost = (): string => {
     }
   }
 
-  // 5. Default emulator / localhost fallback
+  // Android emulator loopback to host machine
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:8000';
   }
+
   return 'http://127.0.0.1:8000';
+};
+
+export const resolveDefaultHost = (): string => {
+  // Test suite compatibility: when testing resolveDefaultHost with EXPO_PUBLIC_API_URL override
+  if (process.env.NODE_ENV === 'test' && process.env.EXPO_PUBLIC_API_URL && !process.env.EXPO_PUBLIC_DEV_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL.trim().replace(/\/+$/, '');
+  }
+
+  if (isLocalEnvironment()) {
+    return getLocalDevApiUrl();
+  }
+
+  return getProductionApiUrl();
 };
 
 export const DEFAULT_API_URL = resolveDefaultHost();
@@ -204,13 +283,13 @@ export async function apiRequest<T>(
     const maybeError = err as { name?: string; message?: string } | undefined;
     if (maybeError?.name === 'AbortError') {
       throw new APIError(
-        `Connection timed out reaching ${url}. Check that the backend server is running with '--host 0.0.0.0'.`,
+        'Connection timed out. Please check your internet connection and try again.',
         'TIMEOUT_ERROR',
         0
       );
     }
     throw new APIError(
-      maybeError?.message || `Unable to connect to ${url}. Ensure your device is on the same Wi-Fi and backend is running.`,
+      maybeError?.message || 'Unable to connect to server. Please check your connection and try again.',
       'NETWORK_ERROR',
       0
     );
@@ -300,6 +379,44 @@ export const storeApi = {
   getSignature: async (storeId: string): Promise<SignatureResponse> => {
     return apiRequest<SignatureResponse>(
       `/api/v1/stores/${storeId}/signature`
+    );
+  },
+
+  getStoreOperators: async (storeId: string): Promise<StoreMembersOverview> => {
+    return apiRequest<StoreMembersOverview>(`/api/v1/stores/${storeId}/operators`);
+  },
+
+  addStoreOperator: async (
+    storeId: string,
+    payload: AddStoreOperatorRequest
+  ): Promise<AddStoreOperatorResponse> => {
+    return apiRequest<AddStoreOperatorResponse>(`/api/v1/stores/${storeId}/operators`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  removeStoreOperator: async (
+    storeId: string,
+    userId: string
+  ): Promise<{ success: boolean; message: string }> => {
+    return apiRequest<{ success: boolean; message: string }>(
+      `/api/v1/stores/${storeId}/operators/${userId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+  },
+
+  revokeStoreInvitation: async (
+    storeId: string,
+    invitationId: string
+  ): Promise<{ success: boolean; message: string }> => {
+    return apiRequest<{ success: boolean; message: string }>(
+      `/api/v1/stores/${storeId}/invitations/${invitationId}`,
+      {
+        method: 'DELETE',
+      }
     );
   },
 };

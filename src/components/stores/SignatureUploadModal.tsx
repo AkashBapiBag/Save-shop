@@ -69,9 +69,9 @@ export const SignatureUploadModal: React.FC<SignatureUploadModalProps> = ({
       >
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
-            <View>
-              <Text style={styles.modalTitle}>Authorized Signature</Text>
-              <Text style={styles.modalSub}>{store.name}</Text>
+            <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+              <Text style={styles.modalTitle} numberOfLines={1}>Authorized Signature</Text>
+              <Text style={styles.modalSub} numberOfLines={1}>{store.name}</Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Ionicons name="close" size={24} color={Palette.textSecondary} />

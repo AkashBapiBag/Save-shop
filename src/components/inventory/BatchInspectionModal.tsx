@@ -39,20 +39,20 @@ export const BatchInspectionModal: React.FC<BatchInspectionModalProps> = ({
     >
       <View style={styles.drawerContainer}>
         <View style={[styles.drawerHeader, { paddingTop: safeTop + 8 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.drawerTitle}>{product.name}</Text>
-            <Text style={styles.drawerSubtitle}>
+          <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+            <Text style={styles.drawerTitle} numberOfLines={1}>{product.name}</Text>
+            <Text style={styles.drawerSubtitle} numberOfLines={1}>
               Category: {product.category} • Total Stock: {product.total_current_stock}{' '}
               {product.default_unit}
             </Text>
           </View>
-          <TouchableOpacity onPress={onClose}>
+          <TouchableOpacity onPress={onClose} style={{ flexShrink: 0 }}>
             <Ionicons name="close-circle" size={26} color={Palette.textSecondary} />
           </TouchableOpacity>
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 16 }}>
-          <Text style={styles.sectionHeader}>FEFO Batches (Earliest Expiry Depleted First)</Text>
+          <Text style={styles.sectionHeader}>FEFO Batches (Earliest Expiry Sold First)</Text>
 
           {isLoading ? (
             <ActivityIndicator size="small" color={Palette.navyPrimary} style={{ marginVertical: 20 }} />
@@ -68,14 +68,16 @@ export const BatchInspectionModal: React.FC<BatchInspectionModalProps> = ({
               return (
                 <Card key={batch.batch_id} style={styles.batchCard}>
                   <View style={styles.batchHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Ionicons name="layers-outline" size={16} color={Palette.bluePrimary} />
-                      <Text style={styles.batchIdentifier}>{batch.batch_identifier}</Text>
+                    <View style={styles.batchIdWrapper}>
+                      <Ionicons name="layers-outline" size={16} color={Palette.bluePrimary} style={{ flexShrink: 0 }} />
+                      <Text style={styles.batchIdentifier} numberOfLines={1} ellipsizeMode="middle">
+                        {batch.batch_identifier}
+                      </Text>
                     </View>
                     <Badge
                       label={
                         isDepleted
-                          ? 'DEPLETED'
+                          ? 'SOLD OUT'
                           : batch.is_expired
                           ? 'EXPIRED'
                           : isCritical
@@ -92,6 +94,7 @@ export const BatchInspectionModal: React.FC<BatchInspectionModalProps> = ({
                           : 'success'
                       }
                       size="sm"
+                      style={{ flexShrink: 0 }}
                     />
                   </View>
 
@@ -110,7 +113,7 @@ export const BatchInspectionModal: React.FC<BatchInspectionModalProps> = ({
                     <Text style={styles.batchMetaVal}>{batch.expiry_date}</Text>
                   </View>
                   <View style={styles.batchMetaRow}>
-                    <Text style={styles.batchMetaLabel}>Acquired On:</Text>
+                    <Text style={styles.batchMetaLabel}>Received On:</Text>
                     <Text style={styles.batchMetaVal}>{batch.purchase_date}</Text>
                   </View>
                 </Card>
@@ -172,24 +175,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  batchIdWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
+  },
   batchIdentifier: {
     fontSize: 13,
     fontWeight: '700',
     color: Palette.textPrimary,
     marginLeft: 6,
+    flexShrink: 1,
   },
   batchMetaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 2,
   },
   batchMetaLabel: {
     fontSize: 12,
     color: Palette.textSecondary,
+    flexShrink: 0,
   },
   batchMetaVal: {
     fontSize: 12,
     fontWeight: '600',
     color: Palette.textPrimary,
+    textAlign: 'right',
+    flexShrink: 1,
+    marginLeft: 8,
   },
 });

@@ -84,7 +84,7 @@ export const DashboardScreen: React.FC = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Palette.navyPrimary} />
-        <Text style={styles.loadingText}>Aggregating store telemetry...</Text>
+        <Text style={styles.loadingText}>Loading store dashboard...</Text>
       </View>
     );
   }
@@ -99,7 +99,7 @@ export const DashboardScreen: React.FC = () => {
       <View style={styles.storeHeader}>
         <View>
           <Text style={styles.storeTitle}>{overview?.store_name || activeStore?.name || 'Store Analytics'}</Text>
-          <Text style={styles.storeSub}>Real-Time Operational Streams</Text>
+          <Text style={styles.storeSub}>Store Performance & Insights</Text>
         </View>
         <TouchableOpacity style={styles.refreshPill} onPress={onRefresh}>
           <Ionicons name="refresh" size={14} color={Palette.bluePrimary} />
@@ -142,7 +142,7 @@ export const DashboardScreen: React.FC = () => {
           <View style={[styles.kpiIcon, { backgroundColor: Palette.roseLight }]}>
             <Ionicons name="alarm-outline" size={20} color={Palette.rose} />
           </View>
-          <Text style={styles.kpiLabel}>Expiring (30d)</Text>
+          <Text style={styles.kpiLabel}>Expiring Soon (30d)</Text>
           <Text style={[styles.kpiValue, { color: Palette.rose }]}>
             {overview?.batches_expiring_within_30_days || 0}
           </Text>
@@ -281,7 +281,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   kpiCard: {
-    width: '48%',
+    flexBasis: '47%',
+    flexGrow: 1,
     padding: 14,
   },
   kpiIcon: {
@@ -386,6 +387,8 @@ const styles = StyleSheet.create({
     color: Palette.navyPrimary,
   },
   velocityRevenue: {
+    flexShrink: 0,
+    marginLeft: 8,
     fontSize: 14,
     fontWeight: '700',
     color: Palette.emeraldDark,

@@ -27,11 +27,11 @@ export const POSCartSummaryBar: React.FC<POSCartSummaryBarProps> = ({
           <View style={styles.cartCountBadge}>
             <Text style={styles.cartCountText}>{totalCartCount}</Text>
           </View>
-          <Text style={styles.cartBarTitle}>View Order & Discounts</Text>
+          <Text style={styles.cartBarTitle} numberOfLines={1}>View Order & Discounts</Text>
         </View>
         <View style={styles.cartBarRight}>
-          <Text style={styles.cartBarTotal}>₹ {finalTotal.toFixed(2)}</Text>
-          <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+          <Text style={styles.cartBarTotal} numberOfLines={1}>₹ {finalTotal.toFixed(2)}</Text>
+          <Ionicons name="chevron-forward" size={18} color="#FFFFFF" style={{ flexShrink: 0 }} />
         </View>
       </TouchableOpacity>
     </View>
@@ -58,6 +58,9 @@ const styles = StyleSheet.create({
   cartBadgeGroup: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
   },
   cartCountBadge: {
     backgroundColor: Palette.bluePrimary,
@@ -67,6 +70,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+    flexShrink: 0,
   },
   cartCountText: {
     color: '#FFFFFF',
@@ -77,10 +81,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+    flexShrink: 1,
   },
   cartBarRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
   },
   cartBarTotal: {
     color: '#FFFFFF',

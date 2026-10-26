@@ -29,7 +29,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   onClose,
   receipt,
 }) => {
-  const auth = React.useContext(AuthContext as any);
+  const auth = React.useContext(AuthContext) as { activeStore?: any } | undefined;
   const activeStore = auth?.activeStore || null;
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
   const [isSharing, setIsSharing] = useState<boolean>(false);

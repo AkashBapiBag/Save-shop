@@ -551,10 +551,12 @@ const styles = StyleSheet.create({
   },
   textInputField: {
     flex: 1,
+    minWidth: 0,
     fontSize: 14,
     fontWeight: '600',
     color: Palette.textPrimary,
     height: '100%',
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none', outlineWidth: 0 } as any) : {}),
   },
   suggestionsContainer: {
     marginTop: 10,

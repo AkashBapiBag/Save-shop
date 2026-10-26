@@ -5,6 +5,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -20,8 +21,7 @@ import {
   BatchReceiveBulkRequest,
 } from '@/types/api';
 import { inventoryApi } from '@/services/api';
-import { Palette } from '@/theme/designSystem';
-import { Input } from '@/components/ui/Input';
+import { Palette, Shadows } from '@/theme/designSystem';
 import { useInventoryCatalog } from '@/hooks/inventory/useInventoryCatalog';
 import { InventoryProductCard } from '@/components/inventory/InventoryProductCard';
 import { CreateProductModal } from '@/components/inventory/CreateProductModal';
@@ -67,12 +67,12 @@ export const InventoryScreen: React.FC = () => {
 
       Alert.alert(
         'Success',
-        `Product '${payload.name}' in category '${payload.category}' registered successfully.`
+        `'${payload.name}' was added successfully.`
       );
       setCreateProductModalVisible(false);
       void loadCatalog(false);
     } catch (err: unknown) {
-      showErrorAlert(err, 'Registration Error', 'Failed to create product.');
+      showErrorAlert(err, 'Product Error', 'Failed to add product.');
     } finally {
       setIsSubmittingProduct(false);
     }
@@ -88,13 +88,13 @@ export const InventoryScreen: React.FC = () => {
       });
 
       Alert.alert(
-        'Stock Inward Confirmed',
-        `Added ${payload.quantity} units to lot '${payload.batch_identifier}'.`
+        'Stock Added',
+        `Added ${payload.quantity} units to batch '${payload.batch_identifier}'.`
       );
       setReceiveStockModalVisible(false);
       void loadCatalog(false);
     } catch (err: unknown) {
-      showErrorAlert(err, 'Receiving Error', 'Failed to receive stock.');
+      showErrorAlert(err, 'Stock Error', 'Failed to add stock.');
     } finally {
       setIsSubmittingSingle(false);
     }
@@ -111,14 +111,14 @@ export const InventoryScreen: React.FC = () => {
 
       const totalQty = payload.batches.reduce((acc, curr) => acc + Number(curr.quantity), 0);
       Alert.alert(
-        'Consignment Received Successfully',
-        `Ingested ${payload.batches.length} products (${totalQty} total units) into active inventory.`
+        'Stock Added Successfully',
+        `Added ${payload.batches.length} products (${totalQty} total units) to your stock.`
       );
 
       setReceiveStockModalVisible(false);
       void loadCatalog(false);
     } catch (err: unknown) {
-      showErrorAlert(err, 'Bulk Inward Error', 'Failed to process bulk stock ingestion.');
+      showErrorAlert(err, 'Stock Error', 'Failed to add stock items.');
     } finally {
       setIsSubmittingBulk(false);
     }
@@ -143,60 +143,84 @@ export const InventoryScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Top Header Actions */}
-      <View style={styles.topActionsBar}>
-        <Input
-          placeholder="Filter catalog by name or category..."
-          value={search}
-          onChangeText={setSearch}
-          containerStyle={{ flex: 1, marginBottom: 0, marginRight: 10 }}
-          icon={<Ionicons name="search-outline" size={18} color={Palette.textSecondary} />}
-          rightElement={
-            search ? (
-              <TouchableOpacity onPress={() => setSearch('')}>
-                <Ionicons name="close-circle" size={18} color={Palette.textMuted} />
-              </TouchableOpacity>
-            ) : null
-          }
-        />
+      {/* Top Header Actions Bar */}
+      <View style={styles.topHeaderBar}>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.screenHeaderTitle}>Inventory</Text>
+          <Text style={styles.screenHeaderSub} numberOfLines={1}>
+            {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'}
+          </Text>
+        </View>
 
-        <TouchableOpacity
-          style={styles.receiveBtn}
-          activeOpacity={0.8}
-          onPress={() => setReceiveStockModalVisible(true)}
-        >
-          <Ionicons name="archive-outline" size={17} color="#FFFFFF" />
-          <Text style={styles.receiveBtnText}>Receive Stock</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRightActions}>
+          <TouchableOpacity
+            style={styles.receiveBtn}
+            activeOpacity={0.8}
+            onPress={() => setReceiveStockModalVisible(true)}
+          >
+            <Ionicons name="archive-outline" size={15} color="#FFFFFF" />
+            <Text style={styles.receiveBtnText}>Receive Stock</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.addBtn}
-          activeOpacity={0.8}
-          onPress={() => setCreateProductModalVisible(true)}
-        >
-          <Ionicons name="add" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addBtn}
+            activeOpacity={0.8}
+            onPress={() => setCreateProductModalVisible(true)}
+          >
+            <Ionicons name="add" size={17} color="#FFFFFF" />
+            <Text style={styles.addBtnText}>Add</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Full-width Responsive Search Bar */}
+      <View style={styles.searchBarSection}>
+        <View style={styles.searchInputBox}>
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color={Palette.textSecondary}
+            style={{ marginRight: 8, flexShrink: 0 }}
+          />
+          <TextInput
+            placeholder="Search products or category..."
+            placeholderTextColor={Palette.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            style={styles.searchTextInput}
+            returnKeyType="search"
+          />
+          {search ? (
+            <TouchableOpacity
+              onPress={() => setSearch('')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={{ flexShrink: 0 }}
+            >
+              <Ionicons name="close-circle" size={18} color={Palette.textMuted} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
       {/* Catalog List */}
       {isLoading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Palette.navyPrimary} />
-          <Text style={styles.loadingText}>Fetching inventory catalog...</Text>
+          <Text style={styles.loadingText}>Loading products...</Text>
         </View>
       ) : filteredProducts.length === 0 ? (
         <View style={styles.centerContainer}>
           <Ionicons name="cube-outline" size={48} color={Palette.textMuted} />
           <Text style={styles.emptyTitle}>No Products Found</Text>
           <Text style={styles.emptySubtitle}>
-            {search ? 'No products match your filter search.' : 'Tap "+" above to register your first product.'}
+            {search ? 'No products match your search.' : 'Tap "Add" above to create your first product.'}
           </Text>
         </View>
       ) : (
         <FlatList
           data={filteredProducts}
           keyExtractor={(item) => item.product_id}
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          contentContainerStyle={{ padding: 14, paddingBottom: 40 }}
           renderItem={({ item }) => (
             <InventoryProductCard
               item={item}
@@ -245,8 +269,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Palette.surfaceLight,
   },
-  topActionsBar: {
+  topHeaderBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -254,28 +279,81 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Palette.borderLight,
   },
+  headerTitleContainer: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 10,
+  },
+  screenHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Palette.navyPrimary,
+  },
+  screenHeaderSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Palette.textSecondary,
+    marginTop: 1,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
+  },
   receiveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Palette.emerald,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginRight: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
   },
   receiveBtnText: {
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 12,
-    marginLeft: 6,
+    marginLeft: 5,
   },
   addBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: Palette.bluePrimary,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: Palette.bluePrimary,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  addBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  searchBarSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: Palette.borderLight,
+  },
+  searchInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Palette.surfaceLight,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 42,
+    overflow: 'hidden',
+  },
+  searchTextInput: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
+    color: Palette.textPrimary,
+    paddingVertical: 0,
+    height: '100%',
   },
   centerContainer: {
     flex: 1,
@@ -299,5 +377,6 @@ const styles = StyleSheet.create({
     color: Palette.textSecondary,
     textAlign: 'center',
     marginTop: 4,
+    maxWidth: 280,
   },
 });

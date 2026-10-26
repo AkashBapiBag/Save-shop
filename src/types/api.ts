@@ -28,13 +28,52 @@ export interface LoginResponse {
 }
 
 export interface AssignStoreRequest {
-  user_id: string;
+  user_id?: string;
+  email?: string;
   store_id: string;
 }
 
 export interface AssignStoreResponse {
   success: boolean;
   message: string;
+}
+
+export interface StoreOperator {
+  user_id: string;
+  email: string;
+  name: string;
+  role: string;
+  picture_url?: string | null;
+  created_at: string;
+}
+
+export interface StoreInvitation {
+  invitation_id: string;
+  store_id: string;
+  email: string;
+  role: string;
+  status: 'pending' | 'accepted' | 'revoked';
+  created_at: string;
+}
+
+export interface StoreMembersOverview {
+  store_id: string;
+  store_name: string;
+  operators: StoreOperator[];
+  members?: StoreOperator[];
+  invitations: StoreInvitation[];
+}
+
+export interface AddStoreOperatorRequest {
+  email: string;
+  role?: string;
+}
+
+export interface AddStoreOperatorResponse {
+  status: 'assigned' | 'invited';
+  message: string;
+  operator?: StoreOperator | null;
+  invitation?: StoreInvitation | null;
 }
 
 export interface IndianState {

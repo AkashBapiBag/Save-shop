@@ -8,6 +8,23 @@
   --font-serif: Georgia, 'Times New Roman', serif;
 }
 
+/* Eliminate default browser black outline box on inputs and textareas */
+input,
+textarea,
+[contenteditable],
+[data-focusable='true'] {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+input:focus,
+textarea:focus,
+[contenteditable]:focus,
+[data-focusable='true']:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 @media print {
   body {
     background: #ffffff !important;

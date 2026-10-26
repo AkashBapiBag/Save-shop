@@ -42,12 +42,12 @@ export const AppHeader: React.FC = () => {
               resizeMode="cover"
             />
           ) : (
-            <Ionicons name="storefront-outline" size={16} color={Palette.bluePrimary} />
+            <Ionicons name="storefront-outline" size={16} color={Palette.bluePrimary} style={{ flexShrink: 0 }} />
           )}
           <Text style={styles.storeName} numberOfLines={1}>
             {activeStore?.name || 'Select Store'}
           </Text>
-          <Ionicons name="chevron-down" size={14} color={Palette.textSecondary} />
+          <Ionicons name="chevron-down" size={14} color={Palette.textSecondary} style={{ flexShrink: 0 }} />
         </TouchableOpacity>
 
         {/* Right Actions: PWA Install + Profile Avatar */}
@@ -79,13 +79,13 @@ export const AppHeader: React.FC = () => {
         >
           <View style={styles.modalCard} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
-              <View>
+              <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.modalTitle}>Switch Store</Text>
-                <Text style={styles.modalSubtitle}>
-                  {isAdmin ? 'All active network stores' : 'Your authorized stores'}
+                <Text style={styles.modalSubtitle} numberOfLines={1}>
+                  {isAdmin ? 'All available stores' : 'Stores you have access to'}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setStoreModalVisible(false)}>
+              <TouchableOpacity onPress={() => setStoreModalVisible(false)} style={{ flexShrink: 0 }}>
                 <Ionicons name="close" size={22} color={Palette.textSecondary} />
               </TouchableOpacity>
             </View>
@@ -94,6 +94,19 @@ export const AppHeader: React.FC = () => {
               data={stores}
               keyExtractor={(item) => item.store_id}
               contentContainerStyle={{ paddingVertical: 8 }}
+              ListEmptyComponent={
+                <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                  <Ionicons name="storefront-outline" size={36} color={Palette.textMuted} />
+                  <Text style={{ marginTop: 8, fontSize: 14, fontWeight: '700', color: Palette.navyPrimary }}>
+                    No Accessible Stores
+                  </Text>
+                  <Text style={{ marginTop: 4, fontSize: 12, color: Palette.textSecondary, textAlign: 'center', paddingHorizontal: 16 }}>
+                    {isAdmin
+                      ? 'No stores have been created yet.'
+                      : 'Ask your store administrator to add your email address to their store.'}
+                  </Text>
+                </View>
+              }
               renderItem={({ item }) => {
                 const isSelected = item.store_id === activeStore?.store_id;
                 return (
@@ -120,8 +133,8 @@ export const AppHeader: React.FC = () => {
                         />
                       )}
                     </View>
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={[styles.storeRowName, isSelected && styles.storeRowNameActive]}>
+                    <View style={{ flex: 1, minWidth: 0, marginLeft: 10 }}>
+                      <Text style={[styles.storeRowName, isSelected && styles.storeRowNameActive]} numberOfLines={1}>
                         {item.name}
                       </Text>
                       {item.owner_name ? (
@@ -136,7 +149,7 @@ export const AppHeader: React.FC = () => {
                       ) : null}
                     </View>
                     {isSelected && (
-                      <Ionicons name="checkmark-circle" size={20} color={Palette.bluePrimary} />
+                      <Ionicons name="checkmark-circle" size={20} color={Palette.bluePrimary} style={{ flexShrink: 0, marginLeft: 6 }} />
                     )}
                   </TouchableOpacity>
                 );
@@ -146,7 +159,7 @@ export const AppHeader: React.FC = () => {
         </TouchableOpacity>
       </Modal>
 
-      {/* Profile & Operator Info Modal */}
+      {/* Profile & Account Info Modal */}
       <Modal
         visible={profileModalVisible}
         transparent
@@ -172,11 +185,11 @@ export const AppHeader: React.FC = () => {
                   {(user?.name || user?.email || 'U')[0].toUpperCase()}
                 </Text>
               </View>
-              <Text style={styles.profileName}>{user?.name || 'Operator'}</Text>
-              <Text style={styles.profileEmail}>{user?.email}</Text>
+              <Text style={styles.profileName} numberOfLines={1}>{user?.name || 'Store Staff'}</Text>
+              <Text style={styles.profileEmail} numberOfLines={1}>{user?.email}</Text>
               <View style={{ marginTop: 8 }}>
                 <Badge
-                  label={isAdmin ? 'ADMINISTRATOR' : 'STANDARD OPERATOR'}
+                  label={isAdmin ? 'ADMINISTRATOR' : 'STORE STAFF'}
                   variant={isAdmin ? 'purple' : 'primary'}
                 />
               </View>
@@ -184,10 +197,10 @@ export const AppHeader: React.FC = () => {
 
             <View style={styles.profileMeta}>
               <Text style={styles.metaLabel}>Current Store</Text>
-              <Text style={styles.metaValue}>{activeStore?.name || 'None'}</Text>
+              <Text style={styles.metaValue} numberOfLines={1}>{activeStore?.name || 'None'}</Text>
             </View>
 
-            {/* PWA Install Option in User Session Modal */}
+            {/* PWA Install Option */}
             <PWAInstallButton variant="card" />
 
             <Button
@@ -227,13 +240,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Palette.borderLight,
-    maxWidth: '55%',
+    maxWidth: '65%',
   },
   storeName: {
     fontSize: 13,
     fontWeight: '600',
     color: Palette.textPrimary,
     marginHorizontal: 6,
+    flexShrink: 1,
   },
   rightGroup: {
     flexDirection: 'row',
@@ -305,6 +319,7 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   storeRowName: {
     fontSize: 14,
@@ -330,11 +345,13 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 5,
     marginRight: 6,
+    flexShrink: 0,
   },
   modalLogoThumb: {
     width: 36,
     height: 36,
     borderRadius: 8,
+    flexShrink: 0,
   },
   profileDetails: {
     alignItems: 'center',

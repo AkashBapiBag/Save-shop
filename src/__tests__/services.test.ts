@@ -6,6 +6,9 @@ import {
   setApiBaseUrl,
   resetApiBaseUrl,
   resolveDefaultHost,
+  isLocalEnvironment,
+  getProductionApiUrl,
+  getLocalDevApiUrl,
   apiRequest,
   authApi,
   storeApi,
@@ -54,6 +57,52 @@ describe('services/api.ts', () => {
     process.env.EXPO_PUBLIC_API_URL = 'https://api.example.com/';
     expect(resolveDefaultHost()).toBe('https://api.example.com');
     process.env.EXPO_PUBLIC_API_URL = prevEnv;
+  });
+
+  it('isLocalEnvironment respects EXPO_PUBLIC_FORCE_PROD and EXPO_PUBLIC_FORCE_DEV overrides', () => {
+    const prevForceProd = process.env.EXPO_PUBLIC_FORCE_PROD;
+    const prevForceDev = process.env.EXPO_PUBLIC_FORCE_DEV;
+
+    process.env.EXPO_PUBLIC_FORCE_PROD = 'true';
+    delete process.env.EXPO_PUBLIC_FORCE_DEV;
+    expect(isLocalEnvironment()).toBe(false);
+
+    process.env.EXPO_PUBLIC_FORCE_PROD = 'false';
+    process.env.EXPO_PUBLIC_FORCE_DEV = 'true';
+    expect(isLocalEnvironment()).toBe(true);
+
+    if (prevForceProd !== undefined) {
+      process.env.EXPO_PUBLIC_FORCE_PROD = prevForceProd;
+    } else {
+      delete process.env.EXPO_PUBLIC_FORCE_PROD;
+    }
+    if (prevForceDev !== undefined) {
+      process.env.EXPO_PUBLIC_FORCE_DEV = prevForceDev;
+    } else {
+      delete process.env.EXPO_PUBLIC_FORCE_DEV;
+    }
+  });
+
+  it('getProductionApiUrl returns configured prod URL and trims trailing slashes', () => {
+    const prevProd = process.env.EXPO_PUBLIC_PROD_API_URL;
+    process.env.EXPO_PUBLIC_PROD_API_URL = 'https://custom-prod.example.com///';
+    expect(getProductionApiUrl()).toBe('https://custom-prod.example.com');
+    if (prevProd !== undefined) {
+      process.env.EXPO_PUBLIC_PROD_API_URL = prevProd;
+    } else {
+      delete process.env.EXPO_PUBLIC_PROD_API_URL;
+    }
+  });
+
+  it('getLocalDevApiUrl returns configured dev URL and trims trailing slashes', () => {
+    const prevDev = process.env.EXPO_PUBLIC_DEV_API_URL;
+    process.env.EXPO_PUBLIC_DEV_API_URL = 'http://192.168.1.100:8000///';
+    expect(getLocalDevApiUrl()).toBe('http://192.168.1.100:8000');
+    if (prevDev !== undefined) {
+      process.env.EXPO_PUBLIC_DEV_API_URL = prevDev;
+    } else {
+      delete process.env.EXPO_PUBLIC_DEV_API_URL;
+    }
   });
 
   it('apiRequest sends Authorization and X-Store-Id headers when set', async () => {
@@ -181,8 +230,12 @@ describe('services/api.ts', () => {
     await storeApi.updateStore('s1', { name: 'Updated Store' });
     await storeApi.uploadSignature('s1', 'sig-base64');
     await storeApi.getSignature('s1');
+    await storeApi.getStoreOperators('s1');
+    await storeApi.addStoreOperator('s1', { email: 'operator@saveshop.com' });
+    await storeApi.removeStoreOperator('s1', 'u1');
+    await storeApi.revokeStoreInvitation('s1', 'inv1');
 
-    expect(global.fetch).toHaveBeenCalledTimes(7);
+    expect(global.fetch).toHaveBeenCalledTimes(11);
   });
 
   it('inventoryApi endpoints invoke apiRequest correctly', async () => {

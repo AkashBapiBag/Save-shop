@@ -118,10 +118,10 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({
       >
         <View style={styles.modalCardLarge}>
           <View style={styles.modalHeader}>
-            <View>
+            <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
               <Text style={styles.modalTitle}>Create New Store</Text>
               <Text style={styles.modalSub}>
-                Pre-save zero-transaction check will be enforced
+                Add a new store branch to your account
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -136,9 +136,9 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({
           >
             {/* Square Logo Section */}
             <View style={styles.formSection}>
-              <Text style={styles.sectionLabel}>Store Logo (Square 1:1)</Text>
+              <Text style={styles.sectionLabel}>Store Logo</Text>
               <Text style={styles.sectionSub}>
-                Strict 1:1 ratio maintained for receipts and mobile headers
+                Used on your printed receipts and bills
               </Text>
 
               <View style={styles.imagePickerRow}>
@@ -152,7 +152,7 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({
                   ) : (
                     <View style={styles.squareEmptyBox}>
                       <Ionicons name="image-outline" size={30} color={Palette.textMuted} />
-                      <Text style={styles.squareEmptyText}>1:1 Square</Text>
+                      <Text style={styles.squareEmptyText}>Add Logo</Text>
                     </View>
                   )}
                 </View>

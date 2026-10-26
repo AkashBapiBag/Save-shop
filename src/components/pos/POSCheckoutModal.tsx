@@ -91,7 +91,7 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                       style={[styles.paymentMethodChip, isSelected && styles.paymentMethodChipActive]}
                       onPress={() => onSelectPaymentMethod(method)}
                     >
-                      <Text style={[styles.paymentMethodText, isSelected && styles.paymentMethodTextActive]}>
+                      <Text style={[styles.paymentMethodText, isSelected && styles.paymentMethodTextActive]} numberOfLines={1}>
                         {method}
                       </Text>
                     </TouchableOpacity>
@@ -175,7 +175,7 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                   containerStyle={{ marginBottom: 4 }}
                 />
                 {!customerName.trim() && (
-                  <Text style={styles.fieldErrorText}>* Customer name is required for tax invoice</Text>
+                  <Text style={styles.fieldErrorText}>* Customer name is required for bill</Text>
                 )}
               </View>
 

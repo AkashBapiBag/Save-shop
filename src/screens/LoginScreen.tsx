@@ -17,10 +17,8 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as AuthSession from 'expo-auth-session';
 import { useAuth } from '@/context/AuthContext';
 import { Palette, Typography, Shadows } from '@/theme/designSystem';
-import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { PWAInstallButton } from '@/components/ui/PWAInstallModal';
-import { getApiBaseUrl, setApiBaseUrl, resetApiBaseUrl, resolveDefaultHost } from '@/services/api';
 
 // Complete pending auth sessions for browser redirect flows
 if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -43,9 +41,6 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
 
 export const LoginScreen: React.FC = () => {
   const { login, isLoading } = useAuth();
-  const [customServerUrl, setCustomServerUrl] = useState('');
-  const [showServerConfig, setShowServerConfig] = useState(false);
-  const [showSetupGuide, setShowSetupGuide] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Client IDs from environment
@@ -55,7 +50,7 @@ export const LoginScreen: React.FC = () => {
 
   const isGoogleConfigured = !!(webClientId || androidClientId || iosClientId);
 
-  // Directly select the appropriate platform Client ID
+  // Select the appropriate platform Client ID
   const platformClientId =
     Platform.OS === 'android' && androidClientId
       ? androidClientId
@@ -90,7 +85,7 @@ export const LoginScreen: React.FC = () => {
           access_token: accessToken,
         });
       } catch (err: any) {
-        const msg = err?.message || 'Authentication with Save Shop backend failed.';
+        const msg = err?.message || 'Unable to sign in. Please try again.';
         setError(msg);
         if (Platform.OS === 'web') {
           console.error('[SaveShop] Sign In Failed:', msg, err);
@@ -101,10 +96,6 @@ export const LoginScreen: React.FC = () => {
     },
     [login]
   );
-
-  useEffect(() => {
-    getApiBaseUrl().then(setCustomServerUrl);
-  }, []);
 
   // On Web, check if the current window received OAuth tokens in its hash (e.g. from redirect)
   useEffect(() => {
@@ -144,11 +135,11 @@ export const LoginScreen: React.FC = () => {
         });
       } else {
         queueMicrotask(() => {
-          setError('Google sign-in succeeded but no identity token was received.');
+          setError('Sign in succeeded, but no identity token was received.');
         });
       }
     } else if (response.type === 'error') {
-      const errorMsg = response.error?.message || 'Google Sign-In failed.';
+      const errorMsg = response.error?.message || 'Google Sign-In could not be completed.';
       queueMicrotask(() => {
         setError(errorMsg);
       });
@@ -160,14 +151,9 @@ export const LoginScreen: React.FC = () => {
 
     if (!isGoogleConfigured) {
       Alert.alert(
-        'Google Client ID Required',
-        'Google SSO requires your Google OAuth Client ID.\n\n' +
-          'Please set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in your Save-shop/.env file.\n\n' +
-          'Tap "Setup Steps" below to see full instructions.',
-        [
-          { text: 'View Setup Guide', onPress: () => setShowSetupGuide(true) },
-          { text: 'OK', style: 'cancel' },
-        ]
+        'Sign In Unavailable',
+        'Google sign-in is not configured yet. Please contact your store administrator.',
+        [{ text: 'OK' }]
       );
       return;
     }
@@ -195,8 +181,6 @@ export const LoginScreen: React.FC = () => {
       }
 
       if (res?.type === 'dismiss' || res?.type === 'cancel') {
-        // Fallback for Web COOP: check if the popup successfully stored the redirect URL
-        // in localStorage before the browser closed or severed the opener
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           const handle = window.localStorage.getItem('ExpoWebBrowserRedirectHandle');
           if (handle) {
@@ -247,7 +231,7 @@ export const LoginScreen: React.FC = () => {
             </View>
             <Text style={styles.brandTitle}>SAVE SHOP</Text>
             <Text style={styles.brandTagline}>
-              Multi-Store Inventory & Retail Billing System
+              Multi-Store Inventory & Retail Billing
             </Text>
           </View>
 
@@ -255,7 +239,7 @@ export const LoginScreen: React.FC = () => {
           <Card style={styles.loginCard} variant="elevated">
             <Text style={styles.cardHeader}>Terminal Sign In</Text>
             <Text style={styles.cardSub}>
-              Single Sign-On (SSO) with your verified Google account
+              Sign in with your Google account to access your store
             </Text>
 
             {error ? (
@@ -265,19 +249,7 @@ export const LoginScreen: React.FC = () => {
               </View>
             ) : null}
 
-            {!isGoogleConfigured && (
-              <View style={styles.warningBox}>
-                <Ionicons name="information-circle" size={18} color="#D97706" />
-                <View style={{ flex: 1, marginLeft: 8 }}>
-                  <Text style={styles.warningTitle}>Google SSO Setup Required</Text>
-                  <Text style={styles.warningText}>
-                    Google OAuth Client ID is not configured yet in .env.
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Google SSO Button */}
+            {/* Google Sign-in Button */}
             <TouchableOpacity
               style={[
                 styles.googleButton,
@@ -301,103 +273,8 @@ export const LoginScreen: React.FC = () => {
 
             <Text style={styles.securityNote}>
               <Ionicons name="shield-checkmark-outline" size={12} color={Palette.textMuted} />
-              {'  '}Secure, federated authentication managed via Google Identity Services
+              {'  '}Fast & secure sign-in with your Google account
             </Text>
-
-            {/* Setup Guide Link */}
-            <TouchableOpacity
-              style={styles.guideToggle}
-              activeOpacity={0.7}
-              onPress={() => setShowSetupGuide(!showSetupGuide)}
-            >
-              <Ionicons
-                name={showSetupGuide ? 'help-circle' : 'help-circle-outline'}
-                size={14}
-                color={Palette.bluePrimary}
-              />
-              <Text style={styles.guideToggleText}>
-                {showSetupGuide ? 'Hide Google SSO Setup Steps' : 'Need help? View Google SSO Setup Steps'}
-              </Text>
-            </TouchableOpacity>
-
-            {showSetupGuide && (
-              <View style={styles.guideBox}>
-                <Text style={styles.guideHeading}>How to configure Google SSO:</Text>
-                <Text style={styles.guideStep}>
-                  1. Visit Google Cloud Console &rarr; APIs & Services &rarr; Credentials.
-                </Text>
-                <Text style={styles.guideStep}>
-                  2. Create an &quot;OAuth 2.0 Client ID&quot; (Web application).
-                </Text>
-                <Text style={styles.guideStep}>
-                  3. Add your client ID in <Text style={{ fontWeight: '700' }}>Save-shop/.env</Text>:
-                </Text>
-                <View style={styles.codeSnippet}>
-                  <Text style={styles.codeSnippetText}>
-                    EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=your-id.apps.googleusercontent.com
-                  </Text>
-                </View>
-                <Text style={styles.guideStep}>
-                  4. Add the same client ID to <Text style={{ fontWeight: '700' }}>Save-shop-backend/.env</Text>:
-                </Text>
-                <View style={styles.codeSnippet}>
-                  <Text style={styles.codeSnippetText}>
-                    GOOGLE_CLIENT_ID=your-id.apps.googleusercontent.com
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Target Server Switcher */}
-            <TouchableOpacity
-              style={styles.serverPill}
-              activeOpacity={0.7}
-              onPress={() => setShowServerConfig(!showServerConfig)}
-            >
-              <Ionicons name="link-outline" size={14} color={Palette.bluePrimary} />
-              <Text style={styles.serverPillText} numberOfLines={1}>
-                Target: {customServerUrl || 'Auto-detecting...'}
-              </Text>
-              <Ionicons
-                name={showServerConfig ? 'chevron-up' : 'chevron-down'}
-                size={14}
-                color={Palette.textMuted}
-              />
-            </TouchableOpacity>
-
-            {showServerConfig && (
-              <View style={styles.serverBox}>
-                <Input
-                  label="Backend API Host URL"
-                  value={customServerUrl}
-                  onChangeText={(val) => {
-                    setCustomServerUrl(val);
-                    if (val.trim()) {
-                      setApiBaseUrl(val.trim());
-                    } else {
-                      resetApiBaseUrl().then(setCustomServerUrl);
-                    }
-                  }}
-                  placeholder={resolveDefaultHost()}
-                  autoCapitalize="none"
-                />
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                  <Text style={{ fontSize: 11, color: Palette.textSecondary, flex: 1 }}>
-                    Default source: EXPO_PUBLIC_API_URL in .env
-                  </Text>
-                  <TouchableOpacity
-                    onPress={async () => {
-                      const def = await resetApiBaseUrl();
-                      setCustomServerUrl(def);
-                    }}
-                  >
-                    <Text style={{ fontSize: 11, color: Palette.bluePrimary, fontWeight: '600', marginLeft: 8 }}>
-                      Reset to .env
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
 
             {/* PWA Install Option */}
             <PWAInstallButton variant="card" />
@@ -455,7 +332,7 @@ const styles = StyleSheet.create({
   },
   loginCard: {
     width: '100%',
-    maxWidth: 440,
+    maxWidth: 420,
     padding: 24,
     borderRadius: 20,
     ...(Platform.OS === 'web'
@@ -490,26 +367,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
   },
-  warningBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 16,
-  },
-  warningTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#92400E',
-  },
-  warningText: {
-    fontSize: 11,
-    color: '#B45309',
-    marginTop: 2,
-  },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -538,75 +395,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Palette.textMuted,
     textAlign: 'center',
-    marginTop: 14,
+    marginTop: 16,
     lineHeight: 16,
-  },
-  guideToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 18,
-    gap: 6,
-  },
-  guideToggleText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Palette.bluePrimary,
-  },
-  guideBox: {
-    marginTop: 12,
-    padding: 14,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  guideHeading: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Palette.textPrimary,
-    marginBottom: 6,
-  },
-  guideStep: {
-    fontSize: 11,
-    color: Palette.textSecondary,
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  codeSnippet: {
-    backgroundColor: '#0F172A',
-    padding: 8,
-    borderRadius: 6,
-    marginVertical: 4,
-  },
-  codeSnippetText: {
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 10,
-    color: '#38BDF8',
-  },
-  serverPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Palette.surfaceLight,
-    borderWidth: 1,
-    borderColor: Palette.borderLight,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
-    marginTop: 20,
-    gap: 6,
-  },
-  serverPillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Palette.navyPrimary,
-    maxWidth: 240,
-  },
-  serverBox: {
-    marginTop: 10,
-    padding: 12,
-    backgroundColor: Palette.surfaceLight,
-    borderRadius: 10,
   },
 });

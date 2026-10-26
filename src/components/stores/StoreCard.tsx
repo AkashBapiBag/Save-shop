@@ -15,6 +15,7 @@ export interface StoreCardProps {
   onSwitchStore: (storeId: string) => void;
   onEditStore: (store: Store) => void;
   onQuickSignature: (store: Store) => void;
+  onManageOperators?: (store: Store) => void;
 }
 
 export const StoreCard: React.FC<StoreCardProps> = ({
@@ -24,6 +25,7 @@ export const StoreCard: React.FC<StoreCardProps> = ({
   onSwitchStore,
   onEditStore,
   onQuickSignature,
+  onManageOperators,
 }) => {
   const logoUri = formatImageUri(item.logo_base64 || item.logo_url);
 
@@ -46,18 +48,18 @@ export const StoreCard: React.FC<StoreCardProps> = ({
 
           <View style={{ flex: 1, marginLeft: 12 }}>
             <View style={styles.nameRow}>
-              <Text style={styles.storeName}>{item.name}</Text>
+              <Text style={styles.storeName} numberOfLines={1}>{item.name}</Text>
               {isActive && (
                 <Badge
                   label="ACTIVE STORE"
                   variant="primary"
                   size="sm"
-                  style={{ marginLeft: 6 }}
+                  style={{ marginLeft: 6, flexShrink: 0 }}
                 />
               )}
             </View>
             <Text style={styles.storeOwner}>
-              {item.owner_name ? `Owner: ${item.owner_name}` : 'Multi-Store Operator'}
+              {item.owner_name ? `Owner: ${item.owner_name}` : 'Store Manager'}
             </Text>
           </View>
         </View>
@@ -100,7 +102,7 @@ export const StoreCard: React.FC<StoreCardProps> = ({
         <View style={styles.detailRow}>
           <Ionicons name="map-outline" size={14} color={Palette.textSecondary} />
           <Text style={styles.detailText}>
-            GST Jurisdiction:{' '}
+            State / GST:{' '}
             <Text style={{ fontWeight: '700', color: Palette.navyPrimary }}>
               {item.state || '19-West Bengal'}
             </Text>
@@ -117,7 +119,7 @@ export const StoreCard: React.FC<StoreCardProps> = ({
             color={item.has_logo || item.logo_base64 || item.logo_url ? Palette.emerald : Palette.textMuted}
           />
           <Text style={styles.badgeItemText}>
-            {item.has_logo || item.logo_base64 || item.logo_url ? 'Square Logo Added' : 'No Logo'}
+            {item.has_logo || item.logo_base64 || item.logo_url ? 'Logo Added' : 'No Logo'}
           </Text>
         </View>
 
@@ -128,7 +130,7 @@ export const StoreCard: React.FC<StoreCardProps> = ({
             color={item.has_signature ? Palette.emerald : Palette.amber}
           />
           <Text style={styles.badgeItemText}>
-            {item.has_signature ? 'Signature Configured' : 'Signature Pending'}
+            {item.has_signature ? 'Signature Added' : 'Signature Pending'}
           </Text>
         </View>
       </View>
@@ -136,6 +138,14 @@ export const StoreCard: React.FC<StoreCardProps> = ({
       {/* Bottom Actions Row (Admin Only) */}
       {isAdmin && (
         <View style={styles.storeCardBottom}>
+          <TouchableOpacity
+            style={styles.actionLinkButton}
+            onPress={() => onManageOperators && onManageOperators(item)}
+          >
+            <Ionicons name="people-outline" size={14} color={Palette.emerald} />
+            <Text style={[styles.actionLinkText, { color: Palette.emerald }]}>Staff</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.actionLinkButton}
             onPress={() => onEditStore(item)}
@@ -150,7 +160,7 @@ export const StoreCard: React.FC<StoreCardProps> = ({
           >
             <Ionicons name="pencil-outline" size={14} color={Palette.navyPrimary} />
             <Text style={[styles.actionLinkText, { color: Palette.navyPrimary }]}>
-              {item.has_signature ? 'Change Signature' : 'Upload Signature'}
+              {item.has_signature ? 'Signature' : 'Upload Signature'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -246,6 +256,7 @@ const styles = StyleSheet.create({
     color: Palette.textSecondary,
   },
   storeCardBottom: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 16,

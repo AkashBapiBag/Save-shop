@@ -18,22 +18,33 @@ import { IndianStatePickerModal } from '@/components/stores/IndianStatePickerMod
 import { SignatureUploadModal } from '@/components/stores/SignatureUploadModal';
 import { CreateStoreModal } from '@/components/stores/CreateStoreModal';
 import { EditStoreModal } from '@/components/stores/EditStoreModal';
+import { StoreUsersModal } from '@/components/stores/StoreUsersModal';
+import { SuccessModal } from '@/components/ui/SuccessModal';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
 export const StoreManagementScreen: React.FC = () => {
-  const { stores, activeStore, switchStore, refreshStores, isAdmin } = useAuth();
+  const { stores, activeStore, switchStore, refreshStores, refreshUser, user, isAdmin } = useAuth();
 
   // Modals state
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [signatureModalVisible, setSignatureModalVisible] = useState(false);
+  const [usersModalVisible, setUsersModalVisible] = useState(false);
 
   const [selectedStoreForEdit, setSelectedStoreForEdit] = useState<Store | null>(null);
   const [targetStoreForSignature, setTargetStoreForSignature] = useState<Store | null>(null);
+  const [selectedStoreForUsers, setSelectedStoreForUsers] = useState<Store | null>(null);
 
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUploadingSig, setIsUploadingSig] = useState(false);
+  const [successFeedback, setSuccessFeedback] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    badgeText?: string;
+    details?: { label: string; value: string }[];
+  } | null>(null);
 
   // Indian States & Union Territories
   const [indianStatesList, setIndianStatesList] = useState<IndianState[]>([]);
@@ -74,7 +85,7 @@ export const StoreManagementScreen: React.FC = () => {
   const handleSwitchStore = async (storeId: string) => {
     try {
       await switchStore(storeId);
-      Alert.alert('Store Switched', 'Terminal context is now active for this store.');
+      Alert.alert('Store Switched', 'You are now managing this store.');
     } catch (err: unknown) {
       showErrorAlert(err, 'Switch Store Error', 'Failed to switch active store.');
     }
@@ -97,17 +108,34 @@ export const StoreManagementScreen: React.FC = () => {
     setSignatureModalVisible(true);
   }, []);
 
+  // Open Store Users / Operators
+  const handleOpenUsers = useCallback((store: Store) => {
+    setSelectedStoreForUsers(store);
+    setUsersModalVisible(true);
+  }, []);
+
   // Create Store Submit
   const handleCreateStoreSubmit = async (payload: StoreCreateRequest) => {
     setIsCreating(true);
     try {
       await storeApi.createStore(payload);
-      Alert.alert(
-        'Store Created',
-        `Store '${payload.name}' registered successfully with state jurisdiction: ${payload.state}.`
-      );
       setCreateModalVisible(false);
       await refreshStores();
+      setSuccessFeedback({
+        visible: true,
+        title: 'Store Registered!',
+        badgeText: 'STORE ACTIVE',
+        message: `Store '${payload.name}' has been created successfully in ${payload.state}.`,
+        details: [
+          { label: 'Store Name', value: payload.name },
+          { label: 'State', value: payload.state || '19-West Bengal' },
+          { label: 'Owner', value: payload.owner_name || 'Store Admin' },
+        ],
+      });
+      Alert.alert(
+        'Store Created',
+        `Store '${payload.name}' registered successfully in ${payload.state || 'selected state'}.`
+      );
     } catch (err: unknown) {
       showErrorAlert(err, 'Store Creation Error', 'Could not create store.');
     } finally {
@@ -120,9 +148,19 @@ export const StoreManagementScreen: React.FC = () => {
     setIsUpdating(true);
     try {
       await storeApi.updateStore(storeId, payload);
-      Alert.alert('Store Updated', 'Store details saved successfully.');
       setEditModalVisible(false);
       await refreshStores();
+      setSuccessFeedback({
+        visible: true,
+        title: 'Store Details Saved!',
+        badgeText: 'UPDATED',
+        message: 'Your store profile and tax configurations have been updated successfully.',
+        details: [
+          { label: 'Store Name', value: payload.name || 'Store' },
+          { label: 'Jurisdiction', value: payload.state || 'Unchanged' },
+        ],
+      });
+      Alert.alert('Store Updated', 'Store details saved successfully.');
     } catch (err: unknown) {
       showErrorAlert(err, 'Update Error', 'Could not update store details.');
     } finally {
@@ -135,9 +173,15 @@ export const StoreManagementScreen: React.FC = () => {
     setIsUploadingSig(true);
     try {
       await storeApi.uploadSignature(storeId, base64);
-      Alert.alert('Signature Saved', 'Store signature uploaded successfully.');
       setSignatureModalVisible(false);
       await refreshStores();
+      setSuccessFeedback({
+        visible: true,
+        title: 'Signature Saved!',
+        badgeText: 'READY FOR POS',
+        message: 'Authorized signature uploaded successfully. It will now automatically appear on print and digital tax invoices.',
+      });
+      Alert.alert('Signature Saved', 'Store signature uploaded successfully.');
     } catch (err: unknown) {
       showErrorAlert(err, 'Upload Error', 'Could not save signature.');
     } finally {
@@ -152,7 +196,7 @@ export const StoreManagementScreen: React.FC = () => {
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Store Directory</Text>
           <Text style={styles.headerSub}>
-            {stores.length} registered location{stores.length === 1 ? '' : 's'} • Multi-Tenant Architecture
+            {stores.length} store location{stores.length === 1 ? '' : 's'}
           </Text>
         </View>
 
@@ -172,7 +216,7 @@ export const StoreManagementScreen: React.FC = () => {
       {isLoadingStates && stores.length === 0 ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Palette.navyPrimary} />
-          <Text style={styles.loadingText}>Loading store network...</Text>
+          <Text style={styles.loadingText}>Loading stores...</Text>
         </View>
       ) : (
         <FlatList
@@ -187,8 +231,35 @@ export const StoreManagementScreen: React.FC = () => {
               onSwitchStore={handleSwitchStore}
               onEditStore={handleOpenEdit}
               onQuickSignature={handleOpenSignature}
+              onManageOperators={handleOpenUsers}
             />
           )}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="business-outline" size={36} color={Palette.textSecondary} />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {isAdmin ? 'No Stores Created Yet' : 'No Store Assigned Yet'}
+              </Text>
+              <Text style={styles.emptySub}>
+                {isAdmin
+                  ? 'Get started by creating your first store branch using the Add Store button above.'
+                  : `You are logged in as ${user?.email || 'Staff'}, but you haven't been assigned to any stores yet.\n\nPlease ask your store administrator to add your email address to their store. Once added, tap Refresh below.`}
+              </Text>
+              <TouchableOpacity
+                style={styles.refreshBtn}
+                onPress={async () => {
+                  await refreshStores();
+                  await refreshUser();
+                  Alert.alert('Refreshed', 'Checked for newly assigned stores.');
+                }}
+              >
+                <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                <Text style={styles.refreshBtnText}>Check / Refresh Access</Text>
+              </TouchableOpacity>
+            </View>
+          }
         />
       )}
 
@@ -243,6 +314,27 @@ export const StoreManagementScreen: React.FC = () => {
         }}
         onClose={() => setStatePickerVisible(false)}
       />
+
+      {/* Store Users & Operators Modal */}
+      <StoreUsersModal
+        visible={usersModalVisible}
+        store={selectedStoreForUsers}
+        onClose={() => setUsersModalVisible(false)}
+        onUpdated={refreshStores}
+      />
+
+      {/* Modern In-App Success Feedback Modal */}
+      {successFeedback && (
+        <SuccessModal
+          visible={successFeedback.visible}
+          title={successFeedback.title}
+          message={successFeedback.message}
+          badgeText={successFeedback.badgeText}
+          details={successFeedback.details}
+          primaryButtonText="Done"
+          onClose={() => setSuccessFeedback(null)}
+        />
+      )}
     </View>
   );
 };
@@ -300,5 +392,52 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 13,
     color: Palette.textSecondary,
+  },
+  emptyContainer: {
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+    marginTop: 20,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Palette.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Palette.navyPrimary,
+    textAlign: 'center',
+  },
+  emptySub: {
+    fontSize: 13,
+    color: Palette.textSecondary,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginTop: 8,
+    marginBottom: 18,
+  },
+  refreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Palette.bluePrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  refreshBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+    marginLeft: 6,
   },
 });

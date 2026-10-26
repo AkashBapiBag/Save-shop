@@ -72,10 +72,16 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
       ::-webkit-scrollbar-thumb:hover {
         background: #94A3B8;
       }
-      /* Allow text inputs to be selectable */
-      input, textarea {
+      /* Allow text inputs to be selectable and disable browser black focus ring */
+      input, textarea, [contenteditable], [data-focusable='true'] {
         user-select: text !important;
         -webkit-user-select: text !important;
+        outline: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+      }
+      input:focus, textarea:focus, [contenteditable]:focus, [data-focusable='true']:focus {
+        outline: none !important;
+        box-shadow: none !important;
       }
       button, a {
         cursor: pointer;

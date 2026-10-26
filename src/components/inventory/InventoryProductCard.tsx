@@ -24,17 +24,19 @@ export const InventoryProductCard: React.FC<InventoryProductCardProps> = ({
       activeOpacity={0.7}
       onPress={() => onPress(item)}
     >
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
         <View style={styles.nameBadgeRow}>
-          <Text style={styles.productName}>{item.name}</Text>
+          <Text style={styles.productName} numberOfLines={1}>
+            {item.name}
+          </Text>
           <Badge
             label={isOut ? 'OUT OF STOCK' : isLow ? 'LOW STOCK' : 'IN STOCK'}
             variant={isOut ? 'danger' : isLow ? 'warning' : 'success'}
             size="sm"
-            style={{ marginLeft: 8 }}
+            style={{ marginLeft: 6, flexShrink: 0 }}
           />
         </View>
-        <Text style={styles.productMeta}>
+        <Text style={styles.productMeta} numberOfLines={1}>
           {item.category} • Min Stock Alert: {item.min_stock_alert_threshold} {item.default_unit}
         </Text>
       </View>
@@ -46,7 +48,7 @@ export const InventoryProductCard: React.FC<InventoryProductCardProps> = ({
         </Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={16} color={Palette.textMuted} style={{ marginLeft: 8 }} />
+      <Ionicons name="chevron-forward" size={16} color={Palette.textMuted} style={{ marginLeft: 6, flexShrink: 0 }} />
     </TouchableOpacity>
   );
 };
@@ -55,7 +57,7 @@ const styles = StyleSheet.create({
   productRow: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    padding: 14,
+    padding: 12,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
@@ -72,6 +74,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: Palette.textPrimary,
+    flexShrink: 1,
   },
   productMeta: {
     fontSize: 12,
@@ -79,7 +82,8 @@ const styles = StyleSheet.create({
   },
   priceStockColumn: {
     alignItems: 'flex-end',
-    marginLeft: 12,
+    marginLeft: 8,
+    flexShrink: 0,
   },
   productPrice: {
     fontSize: 14,

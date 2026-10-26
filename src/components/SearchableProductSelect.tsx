@@ -85,8 +85,8 @@ export const SearchableProductModal: React.FC<SearchableProductModalProps> = ({
       {/* Header */}
       <View style={styles.modalHeader}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.modalTitle}>{title}</Text>
-          <Text style={styles.modalSub}>
+          <Text style={styles.modalTitle} numberOfLines={1}>{title}</Text>
+          <Text style={styles.modalSub} numberOfLines={1}>
             {(products || []).length} products available • Instant search
           </Text>
         </View>

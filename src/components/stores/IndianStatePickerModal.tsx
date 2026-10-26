@@ -70,7 +70,7 @@ export const IndianStatePickerModal: React.FC<IndianStatePickerModalProps> = ({
           {/* Header */}
           <View style={styles.modalHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.modalTitle}>Select State / Jurisdiction</Text>
+              <Text style={styles.modalTitle}>Select State / UT</Text>
               <Text style={styles.modalSub}>
                 36 States & UTs • Standard GST Codes
               </Text>
@@ -216,6 +216,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    minWidth: 0,
     fontSize: 13,
     color: Palette.textPrimary,
     paddingVertical: 0,

@@ -107,7 +107,7 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalTitle}>Register New Product</Text>
-                <Text style={styles.modalSub}>Add a new item to your store catalog</Text>
+                <Text style={styles.modalSub}>Add an item to your store</Text>
               </View>
               <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Ionicons name="close" size={24} color={Palette.textSecondary} />
@@ -131,7 +131,7 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
               />
 
               {/* Measurement Unit */}
-              <Text style={styles.inputLabel}>Measurement Unit *</Text>
+              <Text style={styles.inputLabel}>Unit *</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                 {UNITS.map((u) => (
                   <TouchableOpacity
@@ -165,7 +165,7 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
               </View>
 
               <Input
-                label="Low Stock Alert Threshold"
+                label="Low Stock Alert Level"
                 placeholder="10"
                 value={minThreshold}
                 onChangeText={setMinThreshold}

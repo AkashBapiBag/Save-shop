@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { CalendarModal } from '@/components/ui/CalendarModal';
 import { AppHeader } from '@/components/ui/AppHeader';
+import { SuccessModal } from '@/components/ui/SuccessModal';
 import { AuthProvider } from '@/context/AuthContext';
 
 vi.mock('@/services/api', async (importOriginal) => {
@@ -255,5 +256,34 @@ describe('components/ui/AppHeader.tsx', () => {
     const signOutBtn = screen.getByText('Sign Out');
     expect(signOutBtn).toBeDefined();
     fireEvent.click(signOutBtn);
+  });
+});
+
+describe('components/ui/SuccessModal.tsx', () => {
+  it('renders success modal with details and triggers onClose', () => {
+    const onCloseMock = vi.fn();
+    render(
+      <SuccessModal
+        visible={true}
+        title="Operation Successful!"
+        message="Your changes have been saved."
+        badgeText="COMPLETED"
+        details={[
+          { label: 'Store', value: 'Test Store' },
+          { label: 'Status', value: 'Active' },
+        ]}
+        primaryButtonText="Got It"
+        onClose={onCloseMock}
+      />
+    );
+
+    expect(screen.getByText('Operation Successful!')).toBeDefined();
+    expect(screen.getByText('Your changes have been saved.')).toBeDefined();
+    expect(screen.getByText('COMPLETED')).toBeDefined();
+    expect(screen.getByText('Test Store')).toBeDefined();
+
+    const btn = screen.getByText('Got It');
+    fireEvent.click(btn);
+    expect(onCloseMock).toHaveBeenCalled();
   });
 });

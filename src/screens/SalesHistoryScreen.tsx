@@ -183,7 +183,7 @@ export const SalesHistoryScreen: React.FC = () => {
         <View style={styles.cardTopRow}>
           <View style={styles.invoiceBadge}>
             <Ionicons name="receipt-outline" size={14} color={Palette.bluePrimary} />
-            <Text style={styles.invoiceNumberText}>{item.invoice_number}</Text>
+            <Text style={styles.invoiceNumberText} numberOfLines={1}>{item.invoice_number}</Text>
           </View>
           <Text style={styles.dateText}>{dateFormatted}</Text>
         </View>
@@ -194,11 +194,11 @@ export const SalesHistoryScreen: React.FC = () => {
             <Ionicons name="person-outline" size={14} color={Palette.bluePrimary} />
           </View>
           <View style={styles.customerInfoContainer}>
-            <Text style={styles.customerNameText}>
+            <Text style={styles.customerNameText} numberOfLines={1}>
               {item.customer_name || 'Walk-in Customer'}
             </Text>
             {item.customer_phone ? (
-              <Text style={styles.customerPhoneText}>{item.customer_phone}</Text>
+              <Text style={styles.customerPhoneText} numberOfLines={1}>{item.customer_phone}</Text>
             ) : null}
           </View>
 
@@ -388,6 +388,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   searchInput: {
+    minWidth: 0,
     flex: 1,
     fontSize: 13,
     color: Palette.textPrimary,
@@ -482,6 +483,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Palette.surfaceLight,
   },
   invoiceBadge: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -545,6 +549,9 @@ const styles = StyleSheet.create({
     borderTopColor: Palette.surfaceLight,
   },
   bottomLeftTags: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 6,
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
@@ -576,6 +583,7 @@ const styles = StyleSheet.create({
     color: Palette.bluePrimary,
   },
   viewBillAction: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
