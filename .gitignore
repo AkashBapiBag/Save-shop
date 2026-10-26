@@ -38,6 +38,8 @@ coverage/
 # local env files
 .env
 .env*.local
+DEPLOYMENT_GUIDE.md
+*deployment*guide*.md
 
 # typescript
 *.tsbuildinfo
