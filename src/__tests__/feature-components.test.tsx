@@ -375,6 +375,9 @@ describe('TaxInvoiceModal & Search Modals', () => {
     expect(screen.getByText('Tax Invoice')).toBeDefined();
     expect(screen.getByText('Metro Save Shop')).toBeDefined();
     expect(screen.getByText('Bob Smith')).toBeDefined();
+    expect(screen.getByText('Qty')).toBeDefined();
+    expect(screen.getByText('Disc (₹)')).toBeDefined();
+    expect(screen.getByText('Amount (₹)')).toBeDefined();
 
     const printBtn = screen.getByText('Print Bill');
     fireEvent.click(printBtn);

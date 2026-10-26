@@ -1,14 +1,42 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Platform, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import * as WebBrowser from 'expo-web-browser';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { LoginScreen } from '@/screens/LoginScreen';
 import { MainNavigator } from '@/components/MainNavigator';
 import { Palette } from '@/theme/designSystem';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Complete pending auth sessions as early as possible on Web
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  try {
+    const isPopup = !!window.opener;
+    const hasAuthData =
+      window.location.hash.includes('access_token=') ||
+      window.location.hash.includes('id_token=') ||
+      window.location.search.includes('code=');
+
+    if (isPopup || hasAuthData) {
+      const res = WebBrowser.maybeCompleteAuthSession({ skipRedirectCheck: true });
+      if (res?.type === 'success' || isPopup) {
+        try {
+          window.close();
+        } catch {}
+        setTimeout(() => {
+          try {
+            window.close();
+          } catch {}
+        }, 100);
+      }
+    }
+  } catch {
+    // Ignore COOP or window context access restrictions
+  }
+}
 
 // Inject native desktop application styling on Web
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -66,6 +94,25 @@ function RootContent() {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [isLoading]);
+
+  // If this window is a popup completing Google SSO, render closing indicator instead of full app
+  if (
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    window.opener &&
+    (window.location.hash.includes('access_token=') ||
+      window.location.hash.includes('id_token=') ||
+      window.location.search.includes('code='))
+  ) {
+    return (
+      <View style={styles.splashLoading}>
+        <ActivityIndicator size="large" color={Palette.navyPrimary} />
+        <Text style={{ marginTop: 12, fontSize: 13, color: Palette.textSecondary }}>
+          Completing Google sign in...
+        </Text>
+      </View>
+    );
+  }
 
   if (isLoading) {
     return (

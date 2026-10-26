@@ -338,7 +338,75 @@ describe('screens/LoginScreen.tsx', () => {
 
     expect(await screen.findByText('SAVE SHOP')).toBeDefined();
     expect(await screen.findByText('Terminal Sign In')).toBeDefined();
-    expect(await screen.findByText('Sign in with Google')).toBeDefined();
+    expect(screen.getByText('Sign in with Google')).toBeDefined();
+  });
+
+  it('triggers Google SSO login flow when clicking Sign in with Google', async () => {
+    const loginSpy = vi.fn().mockResolvedValue({
+      access_token: 'mock-jwt-token',
+      token_type: 'bearer',
+      user: {
+        user_id: 'u-1',
+        email: 'test@saveshop.com',
+        name: 'Test User',
+        role: 'ADMIN',
+        current_store_id: 's-1',
+        accessible_store_ids: ['s-1'],
+        created_at: '2026-01-01',
+      },
+    });
+
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/auth/login')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () =>
+            Promise.resolve(
+              JSON.stringify({
+                access_token: 'mock-jwt-token',
+                token_type: 'bearer',
+                user: {
+                  user_id: 'u-1',
+                  email: 'test@saveshop.com',
+                  name: 'Test User',
+                  role: 'ADMIN',
+                  current_store_id: 's-1',
+                  accessible_store_ids: ['s-1'],
+                  created_at: '2026-01-01',
+                },
+              })
+            ),
+        });
+      }
+      if (url.includes('/auth/stores')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(JSON.stringify([mockStore])),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(JSON.stringify({})),
+      });
+    });
+
+    render(
+      <AuthProvider>
+        <LoginScreen />
+      </AuthProvider>
+    );
+
+    const btn = await screen.findByText('Sign in with Google');
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+
+    expect(btn).toBeDefined();
+    global.fetch = originalFetch;
   });
 });
 

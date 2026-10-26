@@ -15,6 +15,8 @@ import { ReceiptResponse } from '@/types/api';
 import { printReceipt, shareReceiptPDF } from '@/services/pdfService';
 import { Palette, Shadows } from '@/theme/designSystem';
 import { numberToWordsINR } from '@/utils/numberToWords';
+import { AuthContext } from '@/context/AuthContext';
+import { formatImageUri } from '@/utils/imageUtils';
 
 interface TaxInvoiceModalProps {
   visible: boolean;
@@ -27,6 +29,8 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   onClose,
   receipt,
 }) => {
+  const auth = React.useContext(AuthContext as any);
+  const activeStore = auth?.activeStore || null;
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
   const [isSharing, setIsSharing] = useState<boolean>(false);
 
@@ -104,16 +108,57 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
       ? invoice_number.split('-').pop() || invoice_number
       : invoice_number;
 
-  const storeName = store.store_name || 'MY SAVE SHOP';
-  const storeAddress = store.address || 'Boinchigram GT Road More, Boinchigram, Pandua, Hooghly, 712134';
-  const storePhone = store.phone_number || '8001387240';
-  const storeEmail = store.email || 'mysaveshop2025@gmail.com';
-  const storeState = store.state || '19-West Bengal';
+  const storeName = store.store_name || activeStore?.name || 'MY SAVE SHOP';
+  const storeAddress =
+    store.address || activeStore?.address || 'Boinchigram GT Road More, Boinchigram, Pandua, Hooghly, 712134';
+  const storePhone = store.phone_number || activeStore?.phone_number || '8001387240';
+  const storeEmail = store.email || activeStore?.email || 'mysaveshop2025@gmail.com';
+  const storeState = store.state || activeStore?.state || '19-West Bengal';
+
+  // Fallback to activeStore for logo and signature if not present on receipt
+  const activeLogo =
+    activeStore && activeStore.store_id === store.store_id
+      ? activeStore.logo_base64 || activeStore.logo_url
+      : null;
+  const logoUri = formatImageUri(store.logo_base64 || store.logo_url || activeLogo);
+
+  const activeSig =
+    activeStore && activeStore.store_id === store.store_id
+      ? activeStore.authorized_signature_base64
+      : null;
+  const signatureUri = formatImageUri(
+    store.authorized_signature_base64 || (store as any).signature_url || activeSig
+  );
+
+  const getEnrichedReceipt = (): ReceiptResponse => {
+    return {
+      ...receipt,
+      store: {
+        ...store,
+        store_name: storeName,
+        address: storeAddress,
+        phone_number: storePhone,
+        email: storeEmail,
+        state: storeState,
+        logo_base64:
+          store.logo_base64 ||
+          (activeStore?.store_id === store.store_id ? activeStore.logo_base64 : undefined),
+        logo_url:
+          store.logo_url ||
+          (activeStore?.store_id === store.store_id ? activeStore.logo_url : undefined),
+        authorized_signature_base64:
+          store.authorized_signature_base64 ||
+          (activeStore?.store_id === store.store_id
+            ? activeStore.authorized_signature_base64
+            : undefined),
+      },
+    };
+  };
 
   const handlePrint = async () => {
     setIsPrinting(true);
     try {
-      await printReceipt(receipt);
+      await printReceipt(getEnrichedReceipt());
     } catch (err: any) {
       Alert.alert('Print Error', err?.message || 'Could not print bill.');
     } finally {
@@ -124,7 +169,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   const handleShare = async () => {
     setIsSharing(true);
     try {
-      await shareReceiptPDF(receipt);
+      await shareReceiptPDF(getEnrichedReceipt());
     } catch (err: any) {
       Alert.alert('PDF Export', err?.message || 'Could not share PDF.');
     } finally {
@@ -136,7 +181,11 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <View style={styles.modalRoot}>
         {/* Top Control Bar */}
-        <View style={styles.topControlBar}>
+        <View
+          style={styles.topControlBar}
+          className="no-print"
+          {...({ 'data-no-print': 'true' } as any)}
+        >
           <TouchableOpacity onPress={onClose} style={styles.closeIconButton}>
             <Ionicons name="close" size={24} color={Palette.textPrimary} />
           </TouchableOpacity>
@@ -155,10 +204,10 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
 
             {/* Store Information Box */}
             <View style={styles.storeBox}>
-              {/* Circular Gold Seal Logo */}
-              {store.logo_base64 ? (
+              {/* Circular Store Logo or Gold Seal Badge */}
+              {logoUri ? (
                 <Image
-                  source={{ uri: `data:image/png;base64,${store.logo_base64}` }}
+                  source={{ uri: logoUri }}
                   style={styles.storeLogoImage}
                   resizeMode="contain"
                 />
@@ -233,27 +282,22 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
                   </Text>
                 </View>
                 <View style={[styles.cell, styles.colCashback]}>
-                  <Text style={styles.thText}>Cash</Text>
-                  <Text style={styles.thText}>back</Text>
+                  <Text style={styles.thText}>Cashback</Text>
                 </View>
                 <View style={[styles.cell, styles.colQty]}>
-                  <Text style={styles.thText}>Quantit</Text>
-                  <Text style={styles.thText}>y</Text>
+                  <Text style={styles.thText}>Qty</Text>
                 </View>
                 <View style={[styles.cell, styles.colUnit]}>
                   <Text style={styles.thText}>Unit</Text>
                 </View>
                 <View style={[styles.cell, styles.colPrice]}>
-                  <Text style={[styles.thText, { textAlign: 'right' }]}>Price/</Text>
-                  <Text style={[styles.thText, { textAlign: 'right' }]}>Unit (₹)</Text>
+                  <Text style={[styles.thText, { textAlign: 'right' }]}>Price (₹)</Text>
                 </View>
                 <View style={[styles.cell, styles.colDiscount]}>
-                  <Text style={[styles.thText, { textAlign: 'right' }]}>Discou</Text>
-                  <Text style={[styles.thText, { textAlign: 'right' }]}>nt (₹)</Text>
+                  <Text style={[styles.thText, { textAlign: 'right' }]}>Disc (₹)</Text>
                 </View>
                 <View style={[styles.cell, styles.colAmount, { borderRightWidth: 0 }]}>
-                  <Text style={[styles.thText, { textAlign: 'right' }]}>Amoun</Text>
-                  <Text style={[styles.thText, { textAlign: 'right' }]}>t(₹)</Text>
+                  <Text style={[styles.thText, { textAlign: 'right' }]}>Amount (₹)</Text>
                 </View>
               </View>
 
@@ -325,9 +369,8 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
                   </Text>
                 </View>
                 <View style={[styles.cell, styles.colAmount, { borderRightWidth: 0 }]}>
-                  <Text style={[styles.tdTextRight, { fontSize: 8.5, fontWeight: '700' }]}>₹</Text>
-                  <Text style={[styles.tdTextRight, { fontWeight: '900', fontSize: 11 }]}>
-                    {Number(final_total).toFixed(2)}
+                  <Text style={[styles.tdTextRight, { fontWeight: '900', fontSize: 10.5 }]}>
+                    ₹ {Number(final_total).toFixed(2)}
                   </Text>
                 </View>
               </View>
@@ -381,9 +424,9 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
               <View style={styles.signatoryCard}>
                 <Text style={styles.signatoryStoreText}>For {storeName}:</Text>
                 <View style={styles.signatoryMiddle}>
-                  {store.authorized_signature_base64 ? (
+                  {signatureUri ? (
                     <Image
-                      source={{ uri: `data:image/png;base64,${store.authorized_signature_base64}` }}
+                      source={{ uri: signatureUri }}
                       style={styles.signatureImage}
                       resizeMode="contain"
                     />
@@ -399,7 +442,11 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
           </View>
 
           {/* Action Buttons */}
-          <View style={styles.actionButtonsContainer}>
+          <View
+            style={styles.actionButtonsContainer}
+            className="no-print"
+            {...({ 'data-no-print': 'true' } as any)}
+          >
             <TouchableOpacity
               onPress={handlePrint}
               style={[styles.primaryButton, { flex: 1, marginRight: 8 }]}
@@ -431,7 +478,12 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={onClose} style={styles.doneButton}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.doneButton}
+            className="no-print"
+            {...({ 'data-no-print': 'true' } as any)}
+          >
             <Text style={styles.doneButtonText}>Done / New Sale</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -474,10 +526,13 @@ const styles = StyleSheet.create({
   },
   paperSheet: {
     backgroundColor: '#FFFFFF',
-    padding: 8,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#94A3B8',
     borderRadius: 2,
+    maxWidth: 794,
+    alignSelf: 'center',
+    width: '100%',
     ...Shadows.md,
   },
 
@@ -836,6 +891,9 @@ const styles = StyleSheet.create({
   actionButtonsContainer: {
     flexDirection: 'row',
     marginTop: 16,
+    maxWidth: 794,
+    alignSelf: 'center',
+    width: '100%',
   },
   primaryButton: {
     backgroundColor: Palette.bluePrimary,
@@ -875,6 +933,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
+    maxWidth: 794,
+    alignSelf: 'center',
+    width: '100%',
   },
   doneButtonText: {
     color: Palette.textSecondary,

@@ -3,6 +3,12 @@ import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 import { ReceiptResponse } from '@/types/api';
 import { numberToWordsINR } from '@/utils/numberToWords';
+import { formatImageUri } from '@/utils/imageUtils';
+
+export const A4_PAGE_OPTIONS = {
+  width: 595,
+  height: 842,
+};
 
 export function buildReceiptHTML(receipt: ReceiptResponse): string {
   const {
@@ -109,15 +115,12 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
     })
     .join('');
 
-  // Circular Gold Seal Logo
-  const logoSrc = store.logo_base64
-    ? store.logo_base64.startsWith('data:')
-      ? store.logo_base64
-      : `data:image/png;base64,${store.logo_base64}`
-    : null;
+  // Circular Gold Seal Logo or Custom Store Logo
+  const rawLogo = store.logo_base64 || store.logo_url || (store as any).logo_data;
+  const logoSrc = formatImageUri(rawLogo);
 
   const logoHtml = logoSrc
-    ? `<img src="${logoSrc}" style="width: 58px; height: 58px; border-radius: 29px; object-fit: contain; margin-right: 12px;" alt="Logo" />`
+    ? `<img src="${logoSrc}" style="width: 58px; height: 58px; border-radius: 6px; object-fit: contain; margin-right: 12px; flex-shrink: 0;" alt="Logo" />`
     : `
       <div style="width: 58px; height: 58px; border-radius: 50%; border: 3px solid #D4AF37; background: #005B94; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; margin-right: 12px; box-shadow: inset 0 0 4px #002244; flex-shrink: 0;">
         <div style="font-size: 7px; color: #FFE885; letter-spacing: 0.5px; font-weight: bold; line-height: 8px;">MY</div>
@@ -128,14 +131,14 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
     `;
 
   // Signature image or stylish fallback SVG
-  const signatureSrc = store.authorized_signature_base64
-    ? store.authorized_signature_base64.startsWith('data:')
-      ? store.authorized_signature_base64
-      : `data:image/png;base64,${store.authorized_signature_base64}`
-    : null;
+  const rawSig =
+    store.authorized_signature_base64 ||
+    (store as any).signature_url ||
+    (store as any).authorized_signature_data;
+  const signatureSrc = formatImageUri(rawSig);
 
   const signatureHtml = signatureSrc
-    ? `<img src="${signatureSrc}" style="max-height: 40px; max-width: 130px; display: block; margin: auto;" alt="Signature" />`
+    ? `<img src="${signatureSrc}" style="max-height: 42px; max-width: 130px; display: block; margin: auto; object-fit: contain;" alt="Signature" />`
     : `
       <svg width="120" height="40" viewBox="0 0 120 40" style="display: block; margin: auto;">
         <path d="M 15 25 C 25 12, 30 8, 38 15 C 45 22, 40 32, 55 26 C 65 20, 75 10, 85 16 C 95 24, 90 30, 105 24 M 22 29 Q 50 8 92 20 Q 70 32 35 26" stroke="#1E293B" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
@@ -151,7 +154,7 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
         <style>
           @page {
             size: A4 portrait;
-            margin: 10mm 8mm 12mm 8mm;
+            margin: 10mm 12mm 12mm 12mm;
           }
           * {
             box-sizing: border-box;
@@ -162,7 +165,7 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
             color: #0F172A;
             margin: 0;
-            padding: 8px;
+            padding: 0;
             font-size: 11px;
             background: #fff;
           }
@@ -179,8 +182,8 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
           }
           .invoice-box {
             width: 100%;
-            max-width: 680px;
-            margin: auto;
+            max-width: 100%;
+            margin: 0 auto;
           }
           .store-box {
             border: 1px solid #475569;
@@ -471,12 +474,12 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
           <table class="items-table">
             <colgroup>
               <col style="width: 5%;">
-              <col style="width: 27%;">
+              <col style="width: 31%;">
+              <col style="width: 11%;">
+              <col style="width: 8%;">
+              <col style="width: 9%;">
+              <col style="width: 11%;">
               <col style="width: 12%;">
-              <col style="width: 8.5%;">
-              <col style="width: 10%;">
-              <col style="width: 12%;">
-              <col style="width: 12.5%;">
               <col style="width: 13%;">
             </colgroup>
             <thead>
@@ -484,11 +487,11 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
                 <th>#</th>
                 <th style="text-align: left; padding-left: 6px;">Item Name</th>
                 <th>Cash<br/>back</th>
-                <th>Quantit<br/>y</th>
+                <th>Qty</th>
                 <th>Unit</th>
                 <th style="text-align: right; padding-right: 6px;">Price/<br/>Unit (₹)</th>
-                <th style="text-align: right; padding-right: 6px;">Discou<br/>nt (₹)</th>
-                <th style="text-align: right; padding-right: 6px;">Amoun<br/>t(₹)</th>
+                <th style="text-align: right; padding-right: 6px;">Discount (₹)</th>
+                <th style="text-align: right; padding-right: 6px;">Amount (₹)</th>
               </tr>
             </thead>
             <tbody>
@@ -496,15 +499,12 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
               <tr class="totals-row">
                 <td style="border-right: none;"></td>
                 <td style="border-left: none; text-align: left; padding-left: 6px; font-weight: bold;">Total</td>
-                <td style="text-align: center; font-size: 14.5px; font-weight: 900;">${totalCashbackFormatted}</td>
+                <td style="text-align: center; font-size: 13px; font-weight: 900;">${totalCashbackFormatted}</td>
                 <td style="text-align: center; font-weight: bold;">${totalQtyFormatted}</td>
                 <td>&nbsp;</td>
                 <td>&nbsp;</td>
                 <td style="text-align: right; padding-right: 6px; font-weight: bold;">₹ ${totalDiscount.toFixed(2)}</td>
-                <td style="text-align: right; padding-right: 6px; font-weight: bold; line-height: 1.1;">
-                  <div style="font-size: 9px; font-weight: bold;">₹</div>
-                  <div style="font-size: 12.5px; font-weight: 900;">${Number(final_total).toFixed(2)}</div>
-                </td>
+                <td style="text-align: right; padding-right: 6px; font-weight: 900; font-size: 12px;">₹ ${Number(final_total).toFixed(2)}</td>
               </tr>
               <!-- Bottom Summary Directly Inside Table for 100% Guaranteed Alignment -->
               <tr class="summary-row">
@@ -567,21 +567,158 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
   `;
 }
 
+export const printViaIframeWeb = (html: string, title?: string): Promise<boolean> => {
+  if (typeof document === 'undefined' || typeof window === 'undefined') {
+    return Promise.resolve(false);
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const existingFrame = document.getElementById('__save_shop_print_frame__');
+      if (existingFrame && existingFrame.parentNode) {
+        existingFrame.parentNode.removeChild(existingFrame);
+      }
+
+      const iframe = document.createElement('iframe');
+      iframe.id = '__save_shop_print_frame__';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.opacity = '0';
+      iframe.style.pointerEvents = 'none';
+
+      document.body.appendChild(iframe);
+
+      const frameDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!frameDoc || !iframe.contentWindow) {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        resolve(false);
+        return;
+      }
+
+      frameDoc.open();
+      frameDoc.write(html);
+      frameDoc.close();
+
+      const originalTitle = document.title;
+      if (title) {
+        document.title = title;
+      }
+
+      const executePrint = () => {
+        try {
+          iframe.contentWindow?.focus();
+          if (typeof iframe.contentWindow?.print === 'function') {
+            iframe.contentWindow.print();
+          } else {
+            window.print();
+          }
+        } catch (err) {
+          console.warn('Iframe print error:', err);
+          window.print();
+        } finally {
+          setTimeout(() => {
+            if (iframe.parentNode) {
+              iframe.parentNode.removeChild(iframe);
+            }
+            if (title) {
+              document.title = originalTitle;
+            }
+            resolve(true);
+          }, 1000);
+        }
+      };
+
+      const images = Array.from(frameDoc.images || []);
+      if (images.length === 0) {
+        setTimeout(executePrint, 200);
+      } else {
+        let loaded = 0;
+        const checkDone = () => {
+          loaded++;
+          if (loaded >= images.length) {
+            setTimeout(executePrint, 200);
+          }
+        };
+
+        images.forEach((img) => {
+          if (img.complete) {
+            checkDone();
+          } else {
+            img.onload = checkDone;
+            img.onerror = checkDone;
+          }
+        });
+
+        setTimeout(executePrint, 1200);
+      }
+    } catch (err) {
+      console.warn('Failed to setup print iframe:', err);
+      resolve(false);
+    }
+  });
+};
+
 export const printReceipt = async (receipt: ReceiptResponse): Promise<void> => {
   const html = buildReceiptHTML(receipt);
-  await Print.printAsync({ html });
+
+  const seqNum =
+    receipt.invoice_seq !== undefined && receipt.invoice_seq !== null
+      ? receipt.invoice_seq
+      : receipt.invoice_number.includes('-')
+      ? receipt.invoice_number.split('-').pop() || receipt.invoice_number
+      : receipt.invoice_number;
+  const invoiceDocTitle = `Tax_Invoice_${seqNum}`;
+
+  if (Platform.OS === 'web') {
+    const isJsdom =
+      typeof navigator !== 'undefined' &&
+      navigator.userAgent &&
+      navigator.userAgent.toLowerCase().includes('jsdom');
+
+    if (!isJsdom && typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const printed = await printViaIframeWeb(html, invoiceDocTitle);
+      if (printed) return;
+    }
+
+    await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
+    return;
+  }
+
+  await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
 };
 
 export const shareReceiptPDF = async (receipt: ReceiptResponse): Promise<void> => {
   const html = buildReceiptHTML(receipt);
 
+  const seqNum =
+    receipt.invoice_seq !== undefined && receipt.invoice_seq !== null
+      ? receipt.invoice_seq
+      : receipt.invoice_number.includes('-')
+      ? receipt.invoice_number.split('-').pop() || receipt.invoice_number
+      : receipt.invoice_number;
+  const invoiceDocTitle = `Tax_Invoice_${seqNum}`;
+
   if (Platform.OS === 'web') {
-    await Print.printAsync({ html });
+    const isJsdom =
+      typeof navigator !== 'undefined' &&
+      navigator.userAgent &&
+      navigator.userAgent.toLowerCase().includes('jsdom');
+
+    if (!isJsdom && typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const printed = await printViaIframeWeb(html, invoiceDocTitle);
+      if (printed) return;
+    }
+
+    await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
     return;
   }
 
   try {
-    const { uri } = await Print.printToFileAsync({ html });
+    const { uri } = await Print.printToFileAsync({ html, ...A4_PAGE_OPTIONS });
     const isAvailable = await Sharing.isAvailableAsync();
 
     if (isAvailable) {
@@ -591,10 +728,10 @@ export const shareReceiptPDF = async (receipt: ReceiptResponse): Promise<void> =
         UTI: 'com.adobe.pdf',
       });
     } else {
-      await Print.printAsync({ html });
+      await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
     }
   } catch (error: any) {
     console.warn('Sharing error, fallback to print dialog:', error);
-    await Print.printAsync({ html });
+    await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
   }
 };

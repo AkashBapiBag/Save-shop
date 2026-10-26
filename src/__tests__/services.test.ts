@@ -421,4 +421,22 @@ describe('services/pdfService.ts', () => {
       consoleSpy.mockRestore();
     }
   });
+
+  it('buildReceiptHTML renders logo_url if provided and adheres to A4 specifications', () => {
+    const customReceipt = {
+      ...mockReceipt,
+      store: {
+        ...mockReceipt.store,
+        logo_base64: null,
+        logo_url: 'https://myshop.com/logo.png',
+      },
+    };
+
+    const html = buildReceiptHTML(customReceipt);
+    expect(html).toContain('https://myshop.com/logo.png');
+    expect(html).toContain('size: A4 portrait');
+    expect(html).toContain('Qty');
+    expect(html).toContain('Discount (₹)');
+    expect(html).toContain('Amount (₹)');
+  });
 });

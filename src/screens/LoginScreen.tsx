@@ -22,7 +22,23 @@ import { Card } from '@/components/ui/Card';
 import { getApiBaseUrl, setApiBaseUrl, resetApiBaseUrl, resolveDefaultHost } from '@/services/api';
 
 // Complete pending auth sessions for browser redirect flows
-WebBrowser.maybeCompleteAuthSession();
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  try {
+    const res = WebBrowser.maybeCompleteAuthSession({ skipRedirectCheck: true });
+    if (res?.type === 'success' || !!window.opener) {
+      try {
+        window.close();
+      } catch {}
+      setTimeout(() => {
+        try {
+          window.close();
+        } catch {}
+      }, 100);
+    }
+  } catch {}
+} else {
+  WebBrowser.maybeCompleteAuthSession();
+}
 
 export const LoginScreen: React.FC = () => {
   const { login, isLoading } = useAuth();
@@ -46,16 +62,21 @@ export const LoginScreen: React.FC = () => {
       ? iosClientId
       : webClientId || 'placeholder-google-client-id.apps.googleusercontent.com';
 
+  const redirectUri =
+    Platform.OS === 'web' && typeof window !== 'undefined'
+      ? window.location.origin
+      : AuthSession.makeRedirectUri({
+          scheme: 'saveshop',
+          native: 'com.saveshop.app:/oauthredirect',
+        });
+
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: platformClientId,
     webClientId: webClientId || undefined,
     androidClientId: androidClientId || undefined,
     iosClientId: iosClientId || undefined,
     scopes: ['openid', 'profile', 'email'],
-    redirectUri: AuthSession.makeRedirectUri({
-      scheme: 'saveshop',
-      native: 'com.saveshop.app:/oauthredirect',
-    }),
+    redirectUri,
   });
 
   const handleTokenExchange = useCallback(
@@ -70,7 +91,11 @@ export const LoginScreen: React.FC = () => {
       } catch (err: any) {
         const msg = err?.message || 'Authentication with Save Shop backend failed.';
         setError(msg);
-        Alert.alert('Sign In Failed', msg);
+        if (Platform.OS === 'web') {
+          console.error('[SaveShop] Sign In Failed:', msg, err);
+        } else {
+          Alert.alert('Sign In Failed', msg);
+        }
       }
     },
     [login]
@@ -79,6 +104,25 @@ export const LoginScreen: React.FC = () => {
   useEffect(() => {
     getApiBaseUrl().then(setCustomServerUrl);
   }, []);
+
+  // On Web, check if the current window received OAuth tokens in its hash (e.g. from redirect)
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash && (hash.includes('access_token=') || hash.includes('id_token='))) {
+        const hashParams = new URLSearchParams(hash.replace(/^#/, ''));
+        const accessToken = hashParams.get('access_token') || undefined;
+        const idToken = hashParams.get('id_token') || undefined;
+        const token = idToken || accessToken;
+        if (token) {
+          try {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          } catch {}
+          handleTokenExchange(token, idToken, accessToken);
+        }
+      }
+    }
+  }, [handleTokenExchange]);
 
   // Handle Google Auth response
   useEffect(() => {
@@ -129,11 +173,55 @@ export const LoginScreen: React.FC = () => {
 
     try {
       const res = await promptAsync();
-      if (res.type === 'cancel' || res.type === 'dismiss') {
-        // User voluntarily dismissed the sign-in modal
+
+      if (res?.type === 'success') {
+        const { id_token, access_token } = res.params || {};
+        const authObj = (res as any).authentication;
+        const token =
+          id_token ||
+          authObj?.idToken ||
+          access_token ||
+          authObj?.accessToken;
+
+        if (token) {
+          await handleTokenExchange(
+            token,
+            id_token || authObj?.idToken,
+            access_token || authObj?.accessToken
+          );
+          return;
+        }
+      }
+
+      if (res?.type === 'dismiss' || res?.type === 'cancel') {
+        // Fallback for Web COOP: check if the popup successfully stored the redirect URL
+        // in localStorage before the browser closed or severed the opener
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const handle = window.localStorage.getItem('ExpoWebBrowserRedirectHandle');
+          if (handle) {
+            const originUrl = window.localStorage.getItem(`ExpoWebBrowser_OriginUrl_${handle}`);
+            if (originUrl && (originUrl.includes('access_token=') || originUrl.includes('id_token='))) {
+              try {
+                const urlObj = new URL(originUrl, window.location.href);
+                const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ''));
+                const accessToken = hashParams.get('access_token') || undefined;
+                const idToken = hashParams.get('id_token') || undefined;
+                const token = idToken || accessToken;
+                if (token) {
+                  window.localStorage.removeItem('ExpoWebBrowserRedirectHandle');
+                  window.localStorage.removeItem(`ExpoWebBrowser_OriginUrl_${handle}`);
+                  window.localStorage.removeItem(`ExpoWebBrowser_RedirectUrl_${handle}`);
+                  await handleTokenExchange(token, idToken, accessToken);
+                  return;
+                }
+              } catch {}
+            }
+          }
+        }
         return;
       }
-      if (res.type === 'error') {
+
+      if (res?.type === 'error') {
         setError(res.error?.message || 'Google Sign-In failed.');
       }
     } catch (err: any) {
