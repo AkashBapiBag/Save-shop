@@ -11,6 +11,7 @@ import { ReceiveStockModal } from '@/components/inventory/ReceiveStockModal';
 import { StoreManagementScreen } from '@/screens/StoreManagementScreen';
 import { AuthProvider } from '@/context/AuthContext';
 import { Store, Product } from '@/types/api';
+import { storeApi } from '@/services/api';
 
 const { mockStore, mockProduct } = vi.hoisted(() => {
   const store: Store = {
@@ -559,6 +560,44 @@ describe('components/stores/StoreUsersModal.tsx', () => {
       'Invalid Email',
       'Please enter a valid email address format.'
     );
+  });
+
+  it('renders store operators and distinguishes current user from other staff', async () => {
+    vi.mocked(storeApi.getStoreOperators).mockResolvedValueOnce({
+      store_id: 's-1',
+      store_name: 'Metro Save Shop',
+      operators: [
+        {
+          user_id: 'u-1',
+          email: 'admin@saveshop.com',
+          name: 'Owner Admin',
+          role: 'admin',
+          created_at: '2026-01-01',
+        },
+        {
+          user_id: 'other-user',
+          email: 'other@saveshop.com',
+          name: 'Other Staff',
+          role: 'admin',
+          created_at: '2026-01-01',
+        },
+      ],
+      invitations: [],
+    });
+
+    await act(async () => {
+      render(
+        <StoreUsersModal
+          visible={true}
+          store={{ ...mockStore, owner_name: 'Owner Admin', email: 'admin@saveshop.com' }}
+          onClose={() => {}}
+        />
+      );
+    });
+
+    expect(await screen.findByText('Owner Admin')).toBeDefined();
+    expect(screen.getByText('Other Staff')).toBeDefined();
+    expect(screen.getByText('Owner')).toBeDefined();
   });
 });
 

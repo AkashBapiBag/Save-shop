@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { Palette, Shadows } from '@/theme/designSystem';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { SuccessModal } from '@/components/ui/SuccessModal';
+import { AuthContext } from '@/context/AuthContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
 export interface StoreUsersModalProps {
@@ -34,6 +35,8 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
   onClose,
   onUpdated,
 }) => {
+  const auth = useContext(AuthContext);
+  const user = auth?.user || null;
   const [emailInput, setEmailInput] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [operators, setOperators] = useState<StoreOperator[]>([]);
@@ -325,37 +328,63 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
                       <Text style={styles.emptyText}>No assigned operators for this store yet.</Text>
                     </View>
                   ) : (
-                    operators.map((op) => (
-                      <View key={op.user_id} style={styles.memberCard}>
-                        <View style={styles.avatarThumb}>
-                          <Text style={styles.avatarText}>
-                            {(op.name || op.email || 'U')[0].toUpperCase()}
-                          </Text>
-                        </View>
-                        <View style={styles.memberInfo}>
-                          <Text style={styles.memberName} numberOfLines={1}>
-                            {op.name || 'Operator'}
-                          </Text>
-                          <Text style={styles.memberEmail} numberOfLines={1}>
-                            {op.email}
-                          </Text>
-                          <View style={{ marginTop: 4, alignSelf: 'flex-start' }}>
-                            <Badge
-                              label={op.role?.toUpperCase() || 'OPERATOR'}
-                              variant={op.role === 'admin' ? 'purple' : 'primary'}
-                              size="sm"
-                            />
+                    operators.map((op) => {
+                      const isCurrentUser =
+                        (!!user?.user_id && op.user_id === user.user_id) ||
+                        (!!user?.email && op.email.toLowerCase() === user.email.toLowerCase());
+                      const isStoreOwner =
+                        isCurrentUser ||
+                        (!!store?.email && op.email.toLowerCase() === store.email.toLowerCase()) ||
+                        (!!store?.owner_name && !!op.name && op.name.toLowerCase() === store.owner_name.toLowerCase());
+
+                      return (
+                        <View key={op.user_id} style={styles.memberCard}>
+                          <View style={styles.avatarThumb}>
+                            <Text style={styles.avatarText}>
+                              {(op.name || op.email || 'U')[0].toUpperCase()}
+                            </Text>
                           </View>
+                          <View style={styles.memberInfo}>
+                            <View style={styles.nameRow}>
+                              <Text style={styles.memberName} numberOfLines={1}>
+                                {op.name || 'Operator'}
+                              </Text>
+                              {isCurrentUser && (
+                                <View style={styles.youBadge}>
+                                  <Text style={styles.youBadgeText}>You</Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text style={styles.memberEmail} numberOfLines={1}>
+                              {op.email}
+                            </Text>
+                            <View style={{ marginTop: 4, alignSelf: 'flex-start' }}>
+                              <Badge
+                                label={op.role?.toUpperCase() || 'OPERATOR'}
+                                variant={op.role === 'admin' ? 'purple' : 'primary'}
+                                size="sm"
+                              />
+                            </View>
+                          </View>
+
+                          {/* Do NOT show delete icon on store owner / current user; other admins and operators CAN be removed */}
+                          {isStoreOwner ? (
+                            <View style={styles.ownerShieldBadge}>
+                              <Ionicons name="shield-checkmark" size={13} color={Palette.emerald} />
+                              <Text style={styles.ownerShieldText}>Owner</Text>
+                            </View>
+                          ) : (
+                            <TouchableOpacity
+                              style={styles.removeActionBtn}
+                              onPress={() => handleRemoveOperator(op)}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                              <Ionicons name="trash-outline" size={17} color={Palette.rose} />
+                            </TouchableOpacity>
+                          )}
                         </View>
-                        <TouchableOpacity
-                          style={styles.removeActionBtn}
-                          onPress={() => handleRemoveOperator(op)}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Ionicons name="trash-outline" size={17} color={Palette.rose} />
-                        </TouchableOpacity>
-                      </View>
-                    ))
+                      );
+                    })
                   )}
                 </View>
 
@@ -698,10 +727,42 @@ const styles = StyleSheet.create({
   memberInfo: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   memberName: {
     fontSize: 13.5,
     fontWeight: '700',
     color: Palette.textPrimary,
+  },
+  youBadge: {
+    backgroundColor: Palette.blueSoft,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+  },
+  youBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Palette.bluePrimary,
+  },
+  ownerShieldBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  ownerShieldText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Palette.emerald,
   },
   memberEmail: {
     fontSize: 12,

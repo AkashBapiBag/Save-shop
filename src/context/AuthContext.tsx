@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, Store, UserRole } from '@/types/api';
 import { authApi, setClientAuth } from '@/services/api';
+import { signOutNativeGoogle } from '@/services/nativeGoogleAuth';
 
 interface AuthContextType {
   user: User | null;
@@ -149,6 +150,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setStores([]);
     setClientAuth(null, null, null);
     await AsyncStorage.multiRemove([STORAGE_KEYS.TOKEN, STORAGE_KEYS.USER, STORAGE_KEYS.ACTIVE_STORE]);
+    await signOutNativeGoogle();
   };
 
   const switchStore = async (storeId: string) => {

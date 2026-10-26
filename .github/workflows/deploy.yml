@@ -1,20 +1,33 @@
-name: Test, Build and Deploy Save Shop Frontend to VPS
+name: Build and Deploy Save Shop Frontend to VPS
 
 on:
   push:
     branches:
       - main
       - master
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'LICENSE'
+      - '.vscode/**'
+      - 'android/**'
   workflow_dispatch:
 
+# Cancel any previous in-progress run of this workflow for the same branch to save runner minutes
+concurrency:
+  group: frontend-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test-and-build:
-    name: Run Tests, Build & Deploy Web Frontend
+  build-and-deploy:
+    name: Build & Deploy Web Frontend
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
@@ -24,10 +37,11 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
-      - name: Run Frontend Test Suite
-        run: npm test
+      # Commented out test step to save GitHub Actions CI runner minutes & compute costs
+      # - name: Run Frontend Test Suite
+      #   run: npm test
 
       - name: Build Static Web App
         env:

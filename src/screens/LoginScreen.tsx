@@ -16,6 +16,11 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AuthSession from 'expo-auth-session';
 import { useAuth } from '@/context/AuthContext';
+import {
+  configureGoogleSignIn,
+  isNativeGoogleSignInAvailable,
+  signInWithNativeGoogle,
+} from '@/services/nativeGoogleAuth';
 import { Palette, Typography, Shadows } from '@/theme/designSystem';
 import { Card } from '@/components/ui/Card';
 import { PWAInstallButton } from '@/components/ui/PWAInstallModal';
@@ -49,6 +54,13 @@ export const LoginScreen: React.FC = () => {
   const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
 
   const isGoogleConfigured = !!(webClientId || androidClientId || iosClientId);
+
+  // Configure native Google Sign-In SDK on mobile platforms (Android/iOS)
+  useEffect(() => {
+    if (Platform.OS !== 'web' && webClientId) {
+      configureGoogleSignIn(webClientId);
+    }
+  }, [webClientId]);
 
   // Select the appropriate platform Client ID
   const platformClientId =
@@ -158,6 +170,32 @@ export const LoginScreen: React.FC = () => {
       return;
     }
 
+    // Native mobile Google Play Services popup account picker flow (Android / iOS)
+    if (Platform.OS !== 'web' && isNativeGoogleSignInAvailable()) {
+      try {
+        const nativeResult = await signInWithNativeGoogle();
+        if (nativeResult.success && nativeResult.idToken) {
+          await handleTokenExchange(nativeResult.idToken, nativeResult.idToken);
+          return;
+        }
+        if (nativeResult.cancelled) {
+          // User tapped outside or dismissed the bottom sheet
+          return;
+        }
+        if (nativeResult.error) {
+          console.warn('[SaveShop] Native Google Sign-In error:', nativeResult.error);
+          // If browser auth is unavailable, show the error directly
+          if (!request) {
+            setError(nativeResult.error);
+            return;
+          }
+        }
+      } catch (err: any) {
+        console.warn('[SaveShop] Native Google Sign-In exception:', err);
+      }
+    }
+
+    // Web browser or fallback OAuth session flow
     try {
       const res = await promptAsync();
 
@@ -257,7 +295,7 @@ export const LoginScreen: React.FC = () => {
               ]}
               activeOpacity={0.8}
               onPress={handleGoogleSignIn}
-              disabled={isLoading || (!request && isGoogleConfigured)}
+              disabled={isLoading || (Platform.OS === 'web' && !request && isGoogleConfigured)}
             >
               {isLoading ? (
                 <ActivityIndicator size="small" color={Palette.navyPrimary} />

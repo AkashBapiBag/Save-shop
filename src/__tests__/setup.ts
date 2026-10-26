@@ -132,6 +132,38 @@ vi.mock('expo-auth-session/providers/google', () => ({
   ]),
 }));
 
+// Mock @react-native-google-signin/google-signin
+vi.mock('@react-native-google-signin/google-signin', () => ({
+  GoogleSignin: {
+    configure: vi.fn(),
+    hasPlayServices: vi.fn(() => Promise.resolve(true)),
+    signIn: vi.fn(() =>
+      Promise.resolve({
+        type: 'success',
+        data: {
+          idToken: 'mock-google-id-token',
+          user: {
+            id: 'mock-google-sub',
+            name: 'Google Verified User',
+            email: 'google-user@saveshop.com',
+            photo: null,
+            familyName: null,
+            givenName: null,
+          },
+        },
+      })
+    ),
+    signOut: vi.fn(() => Promise.resolve(null)),
+    revokeAccess: vi.fn(() => Promise.resolve(null)),
+    getCurrentUser: vi.fn(() => null),
+  },
+  statusCodes: {
+    SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED',
+    IN_PROGRESS: 'IN_PROGRESS',
+    PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE',
+  },
+}));
+
 // Mock expo-symbols
 vi.mock('expo-symbols', () => ({
   SymbolView: () => null,
