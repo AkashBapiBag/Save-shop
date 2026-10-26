@@ -22,7 +22,14 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "Save Shop",
+      "shortName": "SaveShop",
+      "description": "Smart Inventory, Invoicing & Khata Book",
+      "themeColor": "#208AEF",
+      "backgroundColor": "#FFFFFF",
+      "display": "standalone",
+      "orientation": "portrait"
     },
     "plugins": [
       "expo-router",

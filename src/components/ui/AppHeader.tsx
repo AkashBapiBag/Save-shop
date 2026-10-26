@@ -16,6 +16,7 @@ import { Palette } from '@/theme/designSystem';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { formatImageUri } from '@/utils/imageUtils';
+import { PWAInstallButton } from '@/components/ui/PWAInstallModal';
 
 export const AppHeader: React.FC = () => {
   const { user, activeStore, stores, switchStore, logout, isAdmin } = useAuth();
@@ -49,8 +50,9 @@ export const AppHeader: React.FC = () => {
           <Ionicons name="chevron-down" size={14} color={Palette.textSecondary} />
         </TouchableOpacity>
 
-        {/* Right Actions: Profile Avatar */}
+        {/* Right Actions: PWA Install + Profile Avatar */}
         <View style={styles.rightGroup}>
+          <PWAInstallButton variant="pill" />
           <TouchableOpacity
             style={styles.profileButton}
             activeOpacity={0.7}
@@ -184,6 +186,9 @@ export const AppHeader: React.FC = () => {
               <Text style={styles.metaLabel}>Current Store</Text>
               <Text style={styles.metaValue}>{activeStore?.name || 'None'}</Text>
             </View>
+
+            {/* PWA Install Option in User Session Modal */}
+            <PWAInstallButton variant="card" />
 
             <Button
               title="Sign Out"

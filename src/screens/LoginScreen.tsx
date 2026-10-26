@@ -19,6 +19,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Palette, Typography, Shadows } from '@/theme/designSystem';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
+import { PWAInstallButton } from '@/components/ui/PWAInstallModal';
 import { getApiBaseUrl, setApiBaseUrl, resetApiBaseUrl, resolveDefaultHost } from '@/services/api';
 
 // Complete pending auth sessions for browser redirect flows
@@ -397,6 +398,9 @@ export const LoginScreen: React.FC = () => {
                 </View>
               </View>
             )}
+
+            {/* PWA Install Option */}
+            <PWAInstallButton variant="card" />
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
