@@ -15,7 +15,8 @@ export function useInventoryCatalog() {
   // Compute existing categories with counts purely from database products (no hardcoded list)
   const existingCategoryStats = useMemo<CategoryStat[]>(() => {
     const counts = new Map<string, number>();
-    products.forEach((p) => {
+    const safeProducts = Array.isArray(products) ? products : [];
+    safeProducts.forEach((p) => {
       const cat = p.category?.trim();
       if (cat) {
         counts.set(cat, (counts.get(cat) || 0) + 1);
@@ -32,7 +33,7 @@ export function useInventoryCatalog() {
     }
     try {
       const data = await inventoryApi.listProducts();
-      setProducts(data);
+      setProducts(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
       logError('useInventoryCatalog:loadCatalog', err);
     } finally {
@@ -48,7 +49,7 @@ export function useInventoryCatalog() {
       .listProducts()
       .then((data) => {
         if (isMounted) {
-          setProducts(data);
+          setProducts(Array.isArray(data) ? data : []);
           setIsLoading(false);
         }
       })

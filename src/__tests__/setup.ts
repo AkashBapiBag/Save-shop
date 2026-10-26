@@ -1,8 +1,29 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
+require('../../scripts/patch-node.cjs');
 import { vi } from 'vitest';
 
 // Define global __DEV__ for test environment
 (globalThis as any).__DEV__ = true;
+
+// Default mock for global fetch to prevent unhandled background network rejections in tests
+if (!globalThis.fetch || typeof (globalThis.fetch as any).mockImplementation !== 'function') {
+  globalThis.fetch = vi.fn().mockImplementation((input: any) => {
+    const url = typeof input === 'string' ? input : input?.url || '';
+    const isArrayEndpoint =
+      url.includes('/products') ||
+      url.includes('/states') ||
+      url.includes('/stores') ||
+      url.includes('/transactions') ||
+      url.includes('/batches');
+    const responsePayload = isArrayEndpoint ? [] : {};
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(responsePayload),
+      text: () => Promise.resolve(JSON.stringify(responsePayload)),
+    } as any);
+  });
+}
 
 // Stub png asset requires
 if (typeof require !== 'undefined' && require.extensions) {
