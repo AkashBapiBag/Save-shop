@@ -45,7 +45,12 @@ export const resolveDefaultHost = (): string => {
     return extraUrl.trim().replace(/\/+$/, '');
   }
 
-  // 3. Fallback for local development when .env is not present
+  // 3. Web browser environment fallback: use window.location.origin (same-origin reverse proxy)
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin.replace(/\/+$/, '');
+  }
+
+  // 4. Fallback for local development when .env is not present
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri && !hostUri.includes('expo-dev-client')) {
     const ip = hostUri.split(':')[0];
@@ -54,7 +59,7 @@ export const resolveDefaultHost = (): string => {
     }
   }
 
-  // 4. Default emulator / localhost fallback
+  // 5. Default emulator / localhost fallback
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:8000';
   }

@@ -51,8 +51,8 @@ describe('services/api.ts', () => {
 
   it('resolveDefaultHost strips trailing slashes from environment variable', () => {
     const prevEnv = process.env.EXPO_PUBLIC_API_URL;
-    process.env.EXPO_PUBLIC_API_URL = 'https://chamber-golf-guardian-thumbnails.trycloudflare.com/';
-    expect(resolveDefaultHost()).toBe('https://chamber-golf-guardian-thumbnails.trycloudflare.com');
+    process.env.EXPO_PUBLIC_API_URL = 'https://api.example.com/';
+    expect(resolveDefaultHost()).toBe('https://api.example.com');
     process.env.EXPO_PUBLIC_API_URL = prevEnv;
   });
 
