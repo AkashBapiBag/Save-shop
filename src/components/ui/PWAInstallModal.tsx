@@ -122,7 +122,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
               <View style={styles.stepContent}>
                 <Text style={styles.stepTitle}>Tap the Share icon</Text>
                 <Text style={styles.stepDesc}>
-                  In Safari's bottom toolbar, tap the square icon with an upward arrow.
+                  In Safari&apos;s bottom toolbar, tap the square icon with an upward arrow.
                 </Text>
               </View>
             </View>

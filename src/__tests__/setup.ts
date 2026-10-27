@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-require('../../scripts/patch-node.cjs');
+import '../../scripts/patch-node.cjs';
 import { vi } from 'vitest';
 
 // Define global __DEV__ for test environment

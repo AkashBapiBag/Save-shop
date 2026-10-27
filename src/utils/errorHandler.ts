@@ -1,4 +1,4 @@
-import { Alert, Platform } from 'react-native';
+import { Alert } from 'react-native';
 import { APIError } from '@/services/api';
 
 export interface FormattedError {

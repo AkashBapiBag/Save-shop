@@ -19,7 +19,7 @@ import {
   BatchReceiveBulkRequest,
 } from '@/types/api';
 import { inventoryApi } from '@/services/api';
-import { Palette, Shadows } from '@/theme/designSystem';
+import { Palette } from '@/theme/designSystem';
 import { useInventoryCatalog } from '@/hooks/inventory/useInventoryCatalog';
 import { InventoryProductCard } from '@/components/inventory/InventoryProductCard';
 import { CreateProductModal } from '@/components/inventory/CreateProductModal';

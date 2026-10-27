@@ -68,7 +68,7 @@ describe('PWA Functionality & Components', () => {
 
   describe('PWAInstallButton component', () => {
     it('renders button when canInstall is true and prompts on click', () => {
-      const { container } = render(<PWAInstallButton variant="pill" />);
+      render(<PWAInstallButton variant="pill" />);
 
       // Initially null because no prompt event yet
       expect(screen.queryByText('Install App')).toBeNull();

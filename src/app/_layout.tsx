@@ -47,6 +47,10 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
 
 // Inject native desktop application styling and referrer policy on Web
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  if (!document.title) {
+    document.title = 'My Save Shop';
+  }
+
   // Prevent Google CDN 429/403 hotlinking rate-limiting by omitting localhost/tunnel referrer
   const existingMeta = document.querySelector('meta[name="referrer"]');
   if (!existingMeta) {
