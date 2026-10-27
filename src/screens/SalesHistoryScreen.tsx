@@ -16,7 +16,7 @@ import { billingApi } from '@/services/api';
 import { Palette, Shadows } from '@/theme/designSystem';
 import { Badge } from '@/components/ui/Badge';
 import { TaxInvoiceModal } from '@/components/TaxInvoiceModal';
-import { OfflineScreen } from '@/components/ui/OfflineScreen';
+import { SalesHistorySkeleton } from '@/components/ui/Skeleton';
 import { useNetworkStatus } from '@/context/NetworkContext';
 import { logError } from '@/utils/errorHandler';
 
@@ -91,6 +91,13 @@ export const SalesHistoryScreen: React.FC = () => {
       isMounted = false;
     };
   }, [searchQuery, selectedDateFilter, activeStoreId]);
+
+  // Auto-reload sales when connection is restored
+  useEffect(() => {
+    if (!isOffline && transactions.length === 0 && !isLoading) {
+      void fetchSales();
+    }
+  }, [isOffline]);
 
   const onRefresh = () => {
     void fetchSales();
@@ -328,19 +335,7 @@ export const SalesHistoryScreen: React.FC = () => {
 
       {/* Sales List */}
       {isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Palette.bluePrimary} />
-          <Text style={styles.loadingText}>Loading sales records...</Text>
-        </View>
-      ) : isOffline && transactions.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <OfflineScreen
-            compact
-            title="Sales History Offline"
-            message="Past sales transactions cannot be fetched while offline. Connect to internet and tap retry."
-            onRetry={fetchSales}
-          />
-        </View>
+        <SalesHistorySkeleton itemCount={5} />
       ) : transactions.length === 0 ? (
         <View style={styles.centerContainer}>
           <Ionicons name="receipt-outline" size={48} color={Palette.textMuted} />

@@ -8,6 +8,7 @@ import { SalesHistoryScreen } from '@/screens/SalesHistoryScreen';
 import { LoginScreen } from '@/screens/LoginScreen';
 import RootLayout from '@/app/_layout';
 import { AuthProvider } from '@/context/AuthContext';
+import { emitGlobalNetworkStatus } from '@/utils/networkEvents';
 import { inventoryApi, billingApi, dashboardApi } from '@/services/api';
 import { Product, Store, TransactionResponse, ReceiptResponse } from '@/types/api';
 
@@ -211,6 +212,48 @@ describe('screens/POSTerminalScreen.tsx', () => {
     // Checkout modal is opened
     expect(await screen.findByText('Complete Payment')).toBeDefined();
   });
+
+  it('triggers onNavigateToSales when the Sales shortcut button in header is clicked', async () => {
+    const handleNavigateToSales = vi.fn();
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <POSTerminalScreen onNavigateToSales={handleNavigateToSales} />
+        </AuthProvider>
+      );
+    });
+
+    const salesBtn = screen.getByText('Sales');
+    expect(salesBtn).toBeDefined();
+    await act(async () => {
+      fireEvent.click(salesBtn);
+    });
+    expect(handleNavigateToSales).toHaveBeenCalledTimes(1);
+  });
+
+  it('displays POSTerminalSkeleton while products are loading from API', async () => {
+    let resolveProducts: (val: any) => void;
+    vi.mocked(inventoryApi.listProducts).mockReturnValue(
+      new Promise((res) => {
+        resolveProducts = res;
+      })
+    );
+
+    render(
+      <AuthProvider>
+        <POSTerminalScreen onNavigateToSales={() => {}} />
+      </AuthProvider>
+    );
+
+    expect(screen.getByTestId('pos-terminal-skeleton')).toBeDefined();
+
+    await act(async () => {
+      resolveProducts!([mockProduct]);
+    });
+
+    expect(await screen.findByText('Farm Fresh Eggs')).toBeDefined();
+    expect(screen.queryByTestId('pos-terminal-skeleton')).toBeNull();
+  });
 });
 
 describe('screens/InventoryScreen.tsx', () => {
@@ -253,6 +296,30 @@ describe('screens/InventoryScreen.tsx', () => {
 
     expect(await screen.findByText('LOT-EGGS-01')).toBeDefined();
     expect(screen.getByText(/FEFO Batches/i)).toBeDefined();
+  });
+
+  it('displays InventorySkeleton while inventory catalog is fetching', async () => {
+    let resolveProducts: (val: any) => void;
+    vi.mocked(inventoryApi.listProducts).mockReturnValue(
+      new Promise((res) => {
+        resolveProducts = res;
+      })
+    );
+
+    render(
+      <AuthProvider>
+        <InventoryScreen />
+      </AuthProvider>
+    );
+
+    expect(screen.getByTestId('inventory-skeleton')).toBeDefined();
+
+    await act(async () => {
+      resolveProducts!([mockProduct]);
+    });
+
+    expect(await screen.findByText('Farm Fresh Eggs')).toBeDefined();
+    expect(screen.queryByTestId('inventory-skeleton')).toBeNull();
   });
 });
 
@@ -298,6 +365,36 @@ describe('screens/DashboardScreen.tsx', () => {
     expect(screen.getByText('Low Stock Alerts')).toBeDefined();
     expect(screen.getByText('Fast Moving Items')).toBeDefined();
   });
+
+  it('displays DashboardSkeleton while dashboard overview metrics are fetching', async () => {
+    let resolveOverview: (val: any) => void;
+    vi.mocked(dashboardApi.getOverview).mockReturnValue(
+      new Promise((res) => {
+        resolveOverview = res;
+      })
+    );
+
+    render(
+      <AuthProvider>
+        <DashboardScreen />
+      </AuthProvider>
+    );
+
+    expect(screen.getByTestId('dashboard-skeleton')).toBeDefined();
+
+    await act(async () => {
+      resolveOverview!({
+        today_revenue: 3200,
+        today_transaction_count: 8,
+        weekly_revenue: 15450,
+        low_stock_products_count: 3,
+        batches_expiring_within_30_days: 1,
+      });
+    });
+
+    expect(await screen.findByText("Today's Revenue")).toBeDefined();
+    expect(screen.queryByTestId('dashboard-skeleton')).toBeNull();
+  });
 });
 
 describe('screens/SalesHistoryScreen.tsx', () => {
@@ -326,6 +423,30 @@ describe('screens/SalesHistoryScreen.tsx', () => {
     expect(await screen.findByText('Tax Invoice')).toBeDefined();
     expect(screen.getByText('One Hundred Eighty Rupees only')).toBeDefined();
   });
+
+  it('displays SalesHistorySkeleton while sales transactions are loading', async () => {
+    let resolveTx: (val: any) => void;
+    vi.mocked(billingApi.listTransactions).mockReturnValue(
+      new Promise((res) => {
+        resolveTx = res;
+      })
+    );
+
+    render(
+      <AuthProvider>
+        <SalesHistoryScreen />
+      </AuthProvider>
+    );
+
+    expect(screen.getByTestId('sales-history-skeleton')).toBeDefined();
+
+    await act(async () => {
+      resolveTx!([mockTransaction]);
+    });
+
+    expect(await screen.findByText('David Miller')).toBeDefined();
+    expect(screen.queryByTestId('sales-history-skeleton')).toBeNull();
+  });
 });
 
 describe('screens/LoginScreen.tsx', () => {
@@ -342,20 +463,6 @@ describe('screens/LoginScreen.tsx', () => {
   });
 
   it('triggers Google SSO login flow when clicking Sign in with Google', async () => {
-    const loginSpy = vi.fn().mockResolvedValue({
-      access_token: 'mock-jwt-token',
-      token_type: 'bearer',
-      user: {
-        user_id: 'u-1',
-        email: 'test@saveshop.com',
-        name: 'Test User',
-        role: 'ADMIN',
-        current_store_id: 's-1',
-        accessible_store_ids: ['s-1'],
-        created_at: '2026-01-01',
-      },
-    });
-
     const originalFetch = global.fetch;
     global.fetch = vi.fn().mockImplementation((url: string) => {
       if (url.includes('/auth/login')) {
@@ -415,5 +522,22 @@ describe('app/_layout.tsx', () => {
     render(<RootLayout />);
     // With no token, defaults to LoginScreen
     expect(await screen.findByText('MY SAVE SHOP')).toBeDefined();
+  });
+
+  it('renders global full-screen OfflineScreen when network is offline', async () => {
+    render(<RootLayout />);
+
+    await act(async () => {
+      emitGlobalNetworkStatus(true);
+    });
+
+    expect(await screen.findByText('Device is Offline')).toBeDefined();
+    expect(screen.getByText('Troubleshooting Checklist')).toBeDefined();
+    expect(screen.getByText('Try Again')).toBeDefined();
+
+    // Reset back to online
+    await act(async () => {
+      emitGlobalNetworkStatus(false);
+    });
   });
 });

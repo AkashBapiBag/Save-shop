@@ -20,6 +20,7 @@ import { Palette, Shadows } from '@/theme/designSystem';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { StoreUsersSkeleton } from '@/components/ui/Skeleton';
 import { AuthContext } from '@/context/AuthContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
@@ -371,10 +372,7 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
                 </TouchableOpacity>
               </View>
             ) : isLoading ? (
-              <View style={styles.centerLoading}>
-                <ActivityIndicator size="large" color={Palette.bluePrimary} />
-                <Text style={styles.loadingText}>Loading store operators...</Text>
-              </View>
+              <StoreUsersSkeleton count={3} />
             ) : (
               <>
                 {/* Active Operators List */}

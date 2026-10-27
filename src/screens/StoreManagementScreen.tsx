@@ -6,8 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   Platform,
-  ActivityIndicator,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
@@ -23,12 +21,12 @@ import { CreateStoreModal } from '@/components/stores/CreateStoreModal';
 import { EditStoreModal } from '@/components/stores/EditStoreModal';
 import { StoreUsersModal } from '@/components/stores/StoreUsersModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
-import { OfflineScreen } from '@/components/ui/OfflineScreen';
+import { StoreManagementSkeleton } from '@/components/ui/Skeleton';
 import { useNetworkStatus } from '@/context/NetworkContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
 export const StoreManagementScreen: React.FC = () => {
-  const { stores, activeStore, switchStore, refreshStores, refreshUser, user, isAdmin } = useAuth();
+  const { stores, activeStore, switchStore, refreshStores, refreshUser, user, isAdmin, isLoading: isAuthLoading } = useAuth();
   const { isOffline } = useNetworkStatus();
 
   // Modals state
@@ -86,6 +84,13 @@ export const StoreManagementScreen: React.FC = () => {
       isMounted = false;
     };
   }, []);
+
+  // Auto-reload stores when connection is restored
+  useEffect(() => {
+    if (!isOffline && stores.length === 0) {
+      void refreshStores();
+    }
+  }, [isOffline]);
 
   // Switch Store
   const handleSwitchStore = async (storeId: string) => {
@@ -245,20 +250,8 @@ export const StoreManagementScreen: React.FC = () => {
       </View>
 
       {/* Stores List */}
-      {isOffline && stores.length === 0 ? (
-        <View style={styles.center}>
-          <OfflineScreen
-            compact
-            title="Store Profiles Offline"
-            message="Store management requires an active network connection to fetch and configure tenant stores."
-            onRetry={refreshStores}
-          />
-        </View>
-      ) : isLoadingStates && stores.length === 0 ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Palette.navyPrimary} />
-          <Text style={styles.loadingText}>Loading stores...</Text>
-        </View>
+      {(isAuthLoading || isLoadingStates) && stores.length === 0 ? (
+        <StoreManagementSkeleton storeCount={3} />
       ) : (
         <FlatList
           data={stores}

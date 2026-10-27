@@ -21,7 +21,7 @@ Resize-Img 512 512 "$destDir\icon-512.png"
 
 $maskBmp = New-Object System.Drawing.Bitmap 512, 512
 $mg = [System.Drawing.Graphics]::FromImage($maskBmp)
-$mg.Clear([System.Drawing.ColorTranslator]::FromHtml('#0F3968'))
+$mg.Clear([System.Drawing.ColorTranslator]::FromHtml('#FFFFFF'))
 $mg.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
 $mg.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
 $mg.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality

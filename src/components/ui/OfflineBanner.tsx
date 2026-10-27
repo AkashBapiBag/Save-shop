@@ -13,7 +13,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Palette, Shadows } from '@/theme/designSystem';
 import { useNetworkStatus } from '@/context/NetworkContext';
 
-export const OfflineBanner: React.FC = () => {
+export interface OfflineBannerProps {
+  hideOfflineBanner?: boolean;
+}
+
+export const OfflineBanner: React.FC<OfflineBannerProps> = ({
+  hideOfflineBanner = false,
+}) => {
   const { isOffline, checkConnection, isChecking } = useNetworkStatus();
   const insets = useSafeAreaInsets();
   const safeTop = Math.max(insets.top, Platform.OS === 'android' ? 24 : 10);
@@ -28,7 +34,7 @@ export const OfflineBanner: React.FC = () => {
   // Pulsing animation for the warning dot
   useEffect(() => {
     let pulseLoop: Animated.CompositeAnimation | null = null;
-    if (isOffline) {
+    if (isOffline && !hideOfflineBanner) {
       pulseLoop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -51,13 +57,27 @@ export const OfflineBanner: React.FC = () => {
     return () => {
       pulseLoop?.stop();
     };
-  }, [isOffline, pulseAnim, useNativeDriver]);
+  }, [isOffline, pulseAnim, useNativeDriver, hideOfflineBanner]);
 
   // Slide banner in/out based on offline status
   useEffect(() => {
     if (isOffline) {
       wasOffline.current = true;
       setJustReconnected(false);
+      if (!hideOfflineBanner) {
+        setVisible(true);
+        Animated.spring(translateY, {
+          toValue: 0,
+          useNativeDriver,
+          bounciness: 4,
+        }).start();
+      } else {
+        setVisible(false);
+      }
+    } else if (wasOffline.current) {
+      // Just reconnected
+      wasOffline.current = false;
+      setJustReconnected(true);
       setVisible(true);
 
       Animated.spring(translateY, {
@@ -65,10 +85,6 @@ export const OfflineBanner: React.FC = () => {
         useNativeDriver,
         bounciness: 4,
       }).start();
-    } else if (wasOffline.current) {
-      // Just reconnected
-      wasOffline.current = false;
-      setJustReconnected(true);
 
       const hideTimer = setTimeout(() => {
         Animated.timing(translateY, {
@@ -83,7 +99,7 @@ export const OfflineBanner: React.FC = () => {
 
       return () => clearTimeout(hideTimer);
     }
-  }, [isOffline, translateY, useNativeDriver]);
+  }, [isOffline, translateY, useNativeDriver, hideOfflineBanner]);
 
   if (!visible) return null;
 

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Palette, Typography, Shadows } from '@/theme/designSystem';
+import { Palette, Shadows } from '@/theme/designSystem';
 import { useNetworkStatus } from '@/context/NetworkContext';
 
 export interface OfflineScreenProps {
@@ -51,7 +51,7 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
     const radarAnimation1 = Animated.loop(
       Animated.parallel([
         Animated.timing(pulseScale1, {
-          toValue: 1.7,
+          toValue: 1.6,
           duration: 2200,
           easing: Easing.out(Easing.ease),
           useNativeDriver,
@@ -71,7 +71,7 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
         Animated.delay(700),
         Animated.parallel([
           Animated.timing(pulseScale2, {
-            toValue: 1.9,
+            toValue: 1.8,
             duration: 2200,
             easing: Easing.out(Easing.ease),
             useNativeDriver,
@@ -90,7 +90,7 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
     const floatAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, {
-          toValue: -6,
+          toValue: -5,
           duration: 1600,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver,
@@ -115,14 +115,14 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
     };
   }, [pulseScale1, pulseOpacity1, pulseScale2, pulseOpacity2, floatAnim, useNativeDriver]);
 
-  // Trigger tactile shake animation when a retry fails
+  // Tactile shake animation when retry fails
   const triggerShake = useCallback(() => {
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: -10, duration: 70, useNativeDriver }),
-      Animated.timing(shakeAnim, { toValue: 10, duration: 70, useNativeDriver }),
-      Animated.timing(shakeAnim, { toValue: -7, duration: 70, useNativeDriver }),
-      Animated.timing(shakeAnim, { toValue: 7, duration: 70, useNativeDriver }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 70, useNativeDriver }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 60, useNativeDriver }),
+      Animated.timing(shakeAnim, { toValue: 10, duration: 60, useNativeDriver }),
+      Animated.timing(shakeAnim, { toValue: -7, duration: 60, useNativeDriver }),
+      Animated.timing(shakeAnim, { toValue: 7, duration: 60, useNativeDriver }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver }),
     ]).start();
   }, [shakeAnim, useNativeDriver]);
 
@@ -140,13 +140,13 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
       const isOnline = await checkConnection();
       if (!isOnline) {
         triggerShake();
-        setFeedbackMessage('Still offline. Please verify Wi-Fi or mobile data.');
+        setFeedbackMessage('Still offline. Please check your Wi-Fi or mobile data.');
       } else {
         setFeedbackMessage(null);
       }
     } catch {
       triggerShake();
-      setFeedbackMessage('Connection attempt failed. Please check network.');
+      setFeedbackMessage('Connection check failed. Please check your device network.');
     } finally {
       setLocalChecking(false);
     }
@@ -191,11 +191,11 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
         >
           <Ionicons
             name="cloud-offline-outline"
-            size={compact ? 36 : 48}
+            size={compact ? 36 : 46}
             color={Palette.rose}
           />
           <View style={styles.badgeWarningPill}>
-            <Ionicons name="alert" size={12} color="#FFFFFF" />
+            <Ionicons name="alert" size={11} color="#FFFFFF" />
           </View>
         </Animated.View>
       </View>
@@ -214,32 +214,44 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
       {/* Feedback Alert if Retry Fails */}
       {feedbackMessage ? (
         <View style={styles.feedbackAlert}>
-          <Ionicons name="information-circle-outline" size={16} color={Palette.rose} />
+          <Ionicons name="information-circle-outline" size={17} color={Palette.rose} />
           <Text style={styles.feedbackText}>{feedbackMessage}</Text>
         </View>
       ) : null}
 
-      {/* Helpful Troubleshooting Checklist (Shown in Full Screen mode) */}
+      {/* Helpful Troubleshooting Checklist */}
       {!compact && (
         <View style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>Troubleshooting Checklist</Text>
-          <View style={styles.tipRow}>
-            <View style={styles.tipIconBox}>
-              <Ionicons name="wifi-outline" size={16} color={Palette.bluePrimary} />
-            </View>
-            <Text style={styles.tipText}>Check if your Wi-Fi or Cellular Data is enabled</Text>
+          <View style={styles.tipsHeaderRow}>
+            <Ionicons name="list-outline" size={15} color={Palette.navyPrimary} style={{ marginRight: 6 }} />
+            <Text style={styles.tipsTitle}>Troubleshooting Checklist</Text>
           </View>
+
           <View style={styles.tipRow}>
-            <View style={styles.tipIconBox}>
-              <Ionicons name="airplane-outline" size={16} color={Palette.amber} />
+            <View style={[styles.tipIconBox, { backgroundColor: '#EFF6FF', borderColor: '#DBEAFE' }]}>
+              <Ionicons name="wifi-outline" size={17} color={Palette.bluePrimary} />
             </View>
-            <Text style={styles.tipText}>Verify that Airplane Mode is turned off</Text>
+            <View style={styles.tipTextCol}>
+              <Text style={styles.tipText}>Check if your Wi-Fi or Cellular Data is enabled</Text>
+            </View>
           </View>
+
           <View style={styles.tipRow}>
-            <View style={styles.tipIconBox}>
-              <Ionicons name="server-outline" size={16} color={Palette.emerald} />
+            <View style={[styles.tipIconBox, { backgroundColor: '#FFFBEB', borderColor: '#FEF3C7' }]}>
+              <Ionicons name="airplane-outline" size={17} color={Palette.amber} />
             </View>
-            <Text style={styles.tipText}>Ensure your local store router has active internet</Text>
+            <View style={styles.tipTextCol}>
+              <Text style={styles.tipText}>Verify that Airplane Mode is turned off</Text>
+            </View>
+          </View>
+
+          <View style={[styles.tipRow, { marginBottom: 0 }]}>
+            <View style={[styles.tipIconBox, { backgroundColor: '#ECFDF5', borderColor: '#D1FAE5' }]}>
+              <Ionicons name="server-outline" size={17} color={Palette.emerald} />
+            </View>
+            <View style={styles.tipTextCol}>
+              <Text style={styles.tipText}>Ensure your local store router has active internet</Text>
+            </View>
           </View>
         </View>
       )}
@@ -261,6 +273,12 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
             {isChecking ? 'Checking Connection...' : 'Try Again'}
           </Text>
         </TouchableOpacity>
+
+        {!compact && (
+          <Text style={styles.autoReconnectNote}>
+            The screen will automatically restore once connection is back.
+          </Text>
+        )}
 
         {showDismiss && onDismiss && (
           <TouchableOpacity
@@ -285,6 +303,7 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={false}
+        keyboardShouldPersistTaps="handled"
       >
         {content}
       </ScrollView>
@@ -295,14 +314,14 @@ export const OfflineScreen: React.FC<OfflineScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 36,
+    paddingVertical: 32,
   },
   compactWrapper: {
     padding: 20,
@@ -310,28 +329,30 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     ...Shadows.sm,
   },
   innerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    maxWidth: 440,
+    maxWidth: 420,
   },
   compactInner: {
-    maxWidth: 360,
+    maxWidth: 340,
   },
   illustrationContainer: {
-    width: 160,
-    height: 160,
+    width: 140,
+    height: 140,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
     position: 'relative',
   },
   compactIllustration: {
-    width: 120,
-    height: 120,
+    width: 110,
+    height: 110,
     marginBottom: 12,
   },
   radarWave: {
@@ -339,23 +360,23 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   radarWaveInner: {
-    width: 96,
-    height: 96,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    width: 104,
+    height: 104,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
     borderWidth: 1.5,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: 'rgba(239, 68, 68, 0.25)',
   },
   radarWaveOuter: {
-    width: 110,
-    height: 110,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    width: 126,
+    height: 126,
+    backgroundColor: 'rgba(239, 68, 68, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)',
+    borderColor: 'rgba(239, 68, 68, 0.15)',
   },
   iconBadge: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 86,
+    height: 86,
+    borderRadius: 43,
     backgroundColor: '#FEF2F2',
     borderWidth: 2,
     borderColor: '#FECACA',
@@ -365,9 +386,9 @@ const styles = StyleSheet.create({
     ...Shadows.md,
   },
   compactIconBadge: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
   },
   badgeWarningPill: {
     position: 'absolute',
@@ -384,16 +405,16 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     alignItems: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 12,
+    marginBottom: 18,
+    paddingHorizontal: 8,
   },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEE2E2',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 16,
     marginBottom: 12,
   },
   pulsingDot: {
@@ -407,15 +428,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: Palette.rose,
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Palette.navyPrimary,
     textAlign: 'center',
     marginBottom: 8,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   compactTitle: {
     fontSize: 18,
@@ -438,55 +459,63 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF1F2',
     borderColor: '#FECDD3',
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     marginBottom: 16,
-    maxWidth: 360,
+    width: '100%',
   },
   feedbackText: {
     fontSize: 13,
     color: Palette.rose,
-    marginLeft: 6,
-    fontWeight: '500',
+    marginLeft: 8,
+    fontWeight: '600',
+    flex: 1,
   },
   tipsCard: {
     width: '100%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: Palette.borderLight,
+    borderColor: '#E2E8F0',
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 22,
+    ...Shadows.sm,
+  },
+  tipsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
   },
   tipsTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: Palette.navyPrimary,
-    marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   tipRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   tipIconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: '#FFFFFF',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 11,
     borderWidth: 1,
-    borderColor: Palette.borderLight,
+  },
+  tipTextCol: {
+    flex: 1,
   },
   tipText: {
     fontSize: 13,
-    color: Palette.textSecondary,
-    flex: 1,
+    color: '#334155',
+    fontWeight: '500',
+    lineHeight: 18,
   },
   actionsContainer: {
     width: '100%',
@@ -498,7 +527,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: Palette.navyPrimary,
     width: '100%',
-    paddingVertical: 14,
+    height: 50,
     borderRadius: 12,
     ...Shadows.md,
   },
@@ -510,8 +539,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  autoReconnectNote: {
+    fontSize: 12,
+    color: Palette.textMuted,
+    textAlign: 'center',
+    marginTop: 10,
+  },
   dismissButton: {
-    marginTop: 12,
+    marginTop: 10,
     paddingVertical: 8,
     paddingHorizontal: 16,
   },

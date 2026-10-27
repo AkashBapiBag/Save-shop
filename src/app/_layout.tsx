@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Platform, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -111,7 +111,6 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 function RootContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const { isOffline, checkConnection } = useNetworkStatus();
-  const [allowOfflineLoginBypass, setAllowOfflineLoginBypass] = useState(false);
 
   useEffect(() => {
     if (!isLoading) {
@@ -146,24 +145,27 @@ function RootContent() {
     );
   }
 
-  if (!isAuthenticated) {
-    if (isOffline && !allowOfflineLoginBypass) {
-      return (
-        <OfflineScreen
-          title="Device is Offline"
-          message="My Save Shop requires an active internet connection to authenticate your account and securely synchronize your stores."
-          onRetry={async () => {
-            await checkConnection();
-          }}
-          showDismiss
-          onDismiss={() => setAllowOfflineLoginBypass(true)}
-        />
-      );
-    }
-    return <LoginScreen />;
-  }
+  return (
+    <View style={styles.rootContainer}>
+      {!isAuthenticated ? <LoginScreen /> : <MainNavigator />}
 
-  return <MainNavigator />;
+      {/* Global Full-Screen Offline View:
+          When offline, covers the entire screen with one clean, beautiful page
+          with proper instructions and retry capability.
+          When reconnected, smoothly dismisses without losing active tab or state! */}
+      {isOffline && (
+        <View style={styles.globalOfflineOverlay}>
+          <OfflineScreen
+            title="Device is Offline"
+            message="My Save Shop requires an active internet connection to securely process transactions, inspect product batches, and synchronize inventory."
+            onRetry={async () => {
+              await checkConnection();
+            }}
+          />
+        </View>
+      )}
+    </View>
+  );
 }
 
 export default function RootLayout() {
@@ -173,7 +175,7 @@ export default function RootLayout() {
       <ErrorBoundary>
         <NetworkProvider>
           <AuthProvider>
-            <OfflineBanner />
+            <OfflineBanner hideOfflineBanner />
             <RootContent />
           </AuthProvider>
         </NetworkProvider>
@@ -182,8 +184,22 @@ export default function RootLayout() {
   );
 }
 
-
 const styles = StyleSheet.create({
+  rootContainer: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: '#FFFFFF',
+  },
+  globalOfflineOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 99999,
+    elevation: 99999,
+    backgroundColor: '#FFFFFF',
+  },
   splashLoading: {
     flex: 1,
     backgroundColor: '#FFFFFF',

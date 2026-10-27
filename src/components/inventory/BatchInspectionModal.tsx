@@ -6,13 +6,13 @@ import {
   Modal,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Product, Batch } from '@/types/api';
 import { Palette } from '@/theme/designSystem';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { BatchInspectionSkeleton } from '@/components/ui/Skeleton';
 
 export interface BatchInspectionModalProps {
   product: Product | null;
@@ -55,7 +55,7 @@ export const BatchInspectionModal: React.FC<BatchInspectionModalProps> = ({
           <Text style={styles.sectionHeader}>FEFO Batches (Earliest Expiry Sold First)</Text>
 
           {isLoading ? (
-            <ActivityIndicator size="small" color={Palette.navyPrimary} style={{ marginVertical: 20 }} />
+            <BatchInspectionSkeleton count={3} />
           ) : batches.length === 0 ? (
             <View style={styles.emptyBatchBox}>
               <Text style={styles.emptyBatchText}>No batches recorded for this product yet.</Text>

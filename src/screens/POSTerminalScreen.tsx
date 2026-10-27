@@ -18,13 +18,13 @@ import { Product, PaymentMethod, ReceiptResponse, POSTransactionCreate } from '@
 import { inventoryApi, billingApi } from '@/services/api';
 import { Palette } from '@/theme/designSystem';
 import { TaxInvoiceModal } from '@/components/TaxInvoiceModal';
+import { POSTerminalSkeleton } from '@/components/ui/Skeleton';
 import { useCart } from '@/hooks/pos/useCart';
 import { POSProductCard } from '@/components/pos/POSProductCard';
 import { POSCategoryBar } from '@/components/pos/POSCategoryBar';
 import { POSCartSummaryBar } from '@/components/pos/POSCartSummaryBar';
 import { POSCartDrawer } from '@/components/pos/POSCartDrawer';
 import { POSCheckoutModal } from '@/components/pos/POSCheckoutModal';
-import { OfflineScreen } from '@/components/ui/OfflineScreen';
 import { useNetworkStatus } from '@/context/NetworkContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
@@ -124,6 +124,13 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
       isMounted = false;
     };
   }, [activeStoreId]);
+
+  // Auto-reload products when connection is restored
+  useEffect(() => {
+    if (!isOffline && products.length === 0 && !isLoading) {
+      void loadProducts(true);
+    }
+  }, [isOffline]);
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
@@ -255,9 +262,9 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
           <View style={styles.headerIconCircle}>
             <Ionicons name="receipt-outline" size={18} color={Palette.bluePrimary} />
           </View>
-          <View style={{ marginLeft: 8, flex: 1, minWidth: 0 }}>
-            <Text style={styles.screenHeaderTitle} numberOfLines={1}>Billing Counter</Text>
-            <Text style={styles.screenHeaderSub} numberOfLines={1}>{activeStore?.name || 'My Save Shop'}</Text>
+          <View style={styles.headerTextGroup}>
+            <Text style={styles.screenHeaderTitle} numberOfLines={1} ellipsizeMode="tail">Billing Counter</Text>
+            <Text style={styles.screenHeaderSub} numberOfLines={1} ellipsizeMode="tail">{activeStore?.name || 'My Save Shop'}</Text>
           </View>
         </View>
 
@@ -267,6 +274,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
               style={styles.salesHistoryButton}
               onPress={onNavigateToSales}
               activeOpacity={0.7}
+              accessibilityLabel="Go to sales section"
             >
               <Ionicons name="time-outline" size={15} color={Palette.bluePrimary} style={{ marginRight: 4 }} />
               <Text style={styles.salesHistoryButtonText}>Sales</Text>
@@ -278,6 +286,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
               style={styles.headerCartQuickPill}
               activeOpacity={0.8}
               onPress={() => setCartDrawerVisible(true)}
+              accessibilityLabel="View cart items"
             >
               <Ionicons name="cart" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
               <Text style={styles.headerCartQuickText}>
@@ -308,88 +317,82 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
         </View>
       </View>
 
-      {/* Category Scroller */}
-      <POSCategoryBar
-        categories={categories}
-        selectedCategory={selectedCategory}
-        categoryCounts={categoryCounts}
-        onSelectCategory={setSelectedCategory}
-      />
-
-      {/* Filter Status Bar */}
-      <View style={styles.filterStatusBar}>
-        <Text style={styles.filterStatusSummary} numberOfLines={1} ellipsizeMode="tail">
-          {selectedCategory !== 'All' ? (
-            <>
-              Category: <Text style={styles.filterStatusStrong}>{selectedCategory}</Text> • {filteredProducts.length} product{filteredProducts.length === 1 ? '' : 's'}
-            </>
-          ) : searchQuery.trim() ? (
-            <>
-              Search: &ldquo;<Text style={styles.filterStatusStrong}>{searchQuery.trim()}</Text>&rdquo; • {filteredProducts.length} found
-            </>
-          ) : (
-            <>
-              Catalog • <Text style={styles.filterStatusStrong}>{filteredProducts.length}</Text> product{filteredProducts.length === 1 ? '' : 's'} available
-            </>
-          )}
-        </Text>
-
-        {isFilterActive && (
-          <TouchableOpacity style={styles.resetFilterChip} onPress={handleResetFilters}>
-            <Ionicons name="refresh-outline" size={12} color={Palette.bluePrimary} style={{ marginRight: 3 }} />
-            <Text style={styles.resetFilterChipText}>Reset Filter</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Product Catalog Grid */}
-      {isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Palette.bluePrimary} />
-          <Text style={styles.loadingText}>Loading inventory products...</Text>
-        </View>
-      ) : isOffline && products.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <OfflineScreen
-            compact
-            title="Catalog Offline"
-            message="Your product catalog could not be downloaded because the device is offline. Check your connection to load inventory."
-            onRetry={() => loadProducts(true)}
-          />
-        </View>
-      ) : filteredProducts.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Ionicons name="cube-outline" size={44} color={Palette.textMuted} />
-          <Text style={styles.emptyTitle}>No Products Found</Text>
-          <Text style={styles.emptySubtitle}>
-            {isFilterActive
-              ? 'No products match your current search or category filter.'
-              : 'This store has no products yet. Add products from the Inventory tab.'}
-          </Text>
-          {isFilterActive && (
-            <TouchableOpacity style={styles.emptyResetBtn} onPress={handleResetFilters}>
-              <Ionicons name="refresh" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
-              <Text style={styles.emptyResetBtnText}>Show All Products</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+      {/* Category Scroller & Catalog / Skeleton */}
+      {isLoading && products.length === 0 ? (
+        <POSTerminalSkeleton cardCount={6} />
       ) : (
-        <FlatList
-          data={filteredProducts}
-          keyExtractor={(item) => item.product_id}
-          numColumns={2}
-          contentContainerStyle={styles.catalogGrid}
-          renderItem={({ item }) => {
-            const inCartItem = cart.find((c) => c.product.product_id === item.product_id);
-            return (
-              <POSProductCard
-                item={item}
-                inCartQty={inCartItem?.quantity || 0}
-                onAddToCart={addToCart}
-              />
-            );
-          }}
-        />
+        <>
+          <POSCategoryBar
+            categories={categories}
+            selectedCategory={selectedCategory}
+            categoryCounts={categoryCounts}
+            onSelectCategory={setSelectedCategory}
+          />
+
+          {/* Filter Status Bar */}
+          <View style={styles.filterStatusBar}>
+            <Text style={styles.filterStatusSummary} numberOfLines={1} ellipsizeMode="tail">
+              {selectedCategory !== 'All' ? (
+                <>
+                  Category: <Text style={styles.filterStatusStrong}>{selectedCategory}</Text> • {filteredProducts.length} product{filteredProducts.length === 1 ? '' : 's'}
+                </>
+              ) : searchQuery.trim() ? (
+                <>
+                  Search: &ldquo;<Text style={styles.filterStatusStrong}>{searchQuery.trim()}</Text>&rdquo; • {filteredProducts.length} found
+                </>
+              ) : (
+                <>
+                  Catalog • <Text style={styles.filterStatusStrong}>{filteredProducts.length}</Text> product{filteredProducts.length === 1 ? '' : 's'} available
+                </>
+              )}
+            </Text>
+
+            {isFilterActive && (
+              <TouchableOpacity style={styles.resetFilterChip} onPress={handleResetFilters}>
+                <Ionicons name="refresh-outline" size={12} color={Palette.bluePrimary} style={{ marginRight: 3 }} />
+                <Text style={styles.resetFilterChipText}>Reset Filter</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Product Catalog Grid */}
+          {isLoading ? (
+            <POSTerminalSkeleton cardCount={4} />
+          ) : filteredProducts.length === 0 ? (
+            <View style={styles.centerContainer}>
+              <Ionicons name="cube-outline" size={44} color={Palette.textMuted} />
+              <Text style={styles.emptyTitle}>No Products Found</Text>
+              <Text style={styles.emptySubtitle}>
+                {isFilterActive
+                  ? 'No products match your current search or category filter.'
+                  : 'This store has no products yet. Add products from the Inventory tab.'}
+              </Text>
+              {isFilterActive && (
+                <TouchableOpacity style={styles.emptyResetBtn} onPress={handleResetFilters}>
+                  <Ionicons name="refresh" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
+                  <Text style={styles.emptyResetBtnText}>Show All Products</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <FlatList
+              data={filteredProducts}
+              keyExtractor={(item) => item.product_id}
+              numColumns={2}
+              contentContainerStyle={styles.catalogGrid}
+              renderItem={({ item }) => {
+                const inCartItem = cart.find((c) => c.product.product_id === item.product_id);
+                return (
+                  <POSProductCard
+                    item={item}
+                    inCartQty={inCartItem?.quantity || 0}
+                    onAddToCart={addToCart}
+                  />
+                );
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* Floating Bottom Cart Bar */}
@@ -463,6 +466,9 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    marginRight: 10,
   },
   headerIconCircle: {
     width: 34,
@@ -471,6 +477,12 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.blueSoft,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+  },
+  headerTextGroup: {
+    marginLeft: 8,
+    flex: 1,
+    minWidth: 0,
   },
   screenHeaderTitle: {
     fontSize: 16,
@@ -486,6 +498,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   salesHistoryButton: {
     flexDirection: 'row',
@@ -494,6 +507,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     backgroundColor: Palette.blueSoft,
     borderRadius: 16,
+    flexShrink: 0,
   },
   salesHistoryButtonText: {
     fontSize: 12,
@@ -507,6 +521,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
+    flexShrink: 0,
   },
   headerCartQuickText: {
     color: '#FFFFFF',

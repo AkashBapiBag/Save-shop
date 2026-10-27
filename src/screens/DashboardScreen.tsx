@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +18,7 @@ import { dashboardApi } from '@/services/api';
 import { Palette, Shadows } from '@/theme/designSystem';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { OfflineScreen } from '@/components/ui/OfflineScreen';
+import { DashboardSkeleton } from '@/components/ui/Skeleton';
 import { useNetworkStatus } from '@/context/NetworkContext';
 import { logError } from '@/utils/errorHandler';
 
@@ -78,31 +77,20 @@ export const DashboardScreen: React.FC = () => {
     };
   }, [activeStore?.store_id]);
 
+  // Auto-reload dashboard when connection is restored
+  useEffect(() => {
+    if (!isOffline && !overview && !isLoading) {
+      void loadDashboardData();
+    }
+  }, [isOffline]);
+
   const onRefresh = () => {
     setIsRefreshing(true);
     void loadDashboardData();
   };
 
   if (isLoading && !overview) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Palette.navyPrimary} />
-        <Text style={styles.loadingText}>Loading store dashboard...</Text>
-      </View>
-    );
-  }
-
-  if (isOffline && !overview) {
-    return (
-      <View style={[styles.center, { padding: 24 }]}>
-        <OfflineScreen
-          compact
-          title="Dashboard Offline"
-          message="Analytics and real-time inventory health require a network connection. Please reconnect to view live statistics."
-          onRetry={loadDashboardData}
-        />
-      </View>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (

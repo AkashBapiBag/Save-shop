@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +25,7 @@ import { InventoryProductCard } from '@/components/inventory/InventoryProductCar
 import { CreateProductModal } from '@/components/inventory/CreateProductModal';
 import { ReceiveStockModal } from '@/components/inventory/ReceiveStockModal';
 import { BatchInspectionModal } from '@/components/inventory/BatchInspectionModal';
-import { OfflineScreen } from '@/components/ui/OfflineScreen';
+import { InventorySkeleton } from '@/components/ui/Skeleton';
 import { useNetworkStatus } from '@/context/NetworkContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
@@ -45,6 +44,13 @@ export const InventoryScreen: React.FC = () => {
     filteredProducts,
     loadCatalog,
   } = useInventoryCatalog();
+
+  // Auto-reload inventory when connection is restored
+  useEffect(() => {
+    if (!isOffline && products.length === 0 && !isLoading) {
+      void loadCatalog(false);
+    }
+  }, [isOffline]);
 
   // Modals
   const [createProductModalVisible, setCreateProductModalVisible] = useState(false);
@@ -192,19 +198,7 @@ export const InventoryScreen: React.FC = () => {
 
       {/* Catalog List */}
       {isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Palette.navyPrimary} />
-          <Text style={styles.loadingText}>Loading products...</Text>
-        </View>
-      ) : isOffline && products.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <OfflineScreen
-            compact
-            title="Inventory Offline"
-            message="Your product inventory cannot be fetched while offline. Please connect to the internet and tap retry."
-            onRetry={() => loadCatalog(false)}
-          />
-        </View>
+        <InventorySkeleton itemCount={6} />
       ) : filteredProducts.length === 0 ? (
         <View style={styles.centerContainer}>
           <Ionicons name="cube-outline" size={48} color={Palette.textMuted} />

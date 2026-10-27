@@ -40,8 +40,8 @@ jobs:
         run: npm ci --prefer-offline --no-audit --no-fund
 
       # Commented out test step to save GitHub Actions CI runner minutes & compute costs
-      # - name: Run Frontend Test Suite
-      #   run: npm test
+      - name: Run Frontend Test Suite
+        run: npm test
 
       - name: Build Static Web App
         env:

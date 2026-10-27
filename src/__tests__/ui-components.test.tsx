@@ -9,6 +9,16 @@ import { Card } from '@/components/ui/Card';
 import { CalendarModal } from '@/components/ui/CalendarModal';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { SuccessModal } from '@/components/ui/SuccessModal';
+import {
+  Skeleton,
+  POSTerminalSkeleton,
+  InventorySkeleton,
+  SalesHistorySkeleton,
+  DashboardSkeleton,
+  StoreManagementSkeleton,
+  BatchInspectionSkeleton,
+  StoreUsersSkeleton,
+} from '@/components/ui/Skeleton';
 import { AuthProvider, AuthContext } from '@/context/AuthContext';
 
 vi.mock('@/services/api', async (importOriginal) => {
@@ -330,5 +340,69 @@ describe('components/ui/SuccessModal.tsx', () => {
     const btn = screen.getByText('Got It');
     fireEvent.click(btn);
     expect(onCloseMock).toHaveBeenCalled();
+  });
+});
+
+describe('components/ui/Skeleton.tsx', () => {
+  it('renders base skeleton with accessibility role and custom testID', () => {
+    render(<Skeleton width={120} height={24} borderRadius={8} testID="custom-skeleton" />);
+    const el = screen.getByTestId('custom-skeleton');
+    expect(el).toBeDefined();
+    expect(el.getAttribute('aria-label') || el.getAttribute('accessibilitylabel')).toBeTruthy();
+  });
+
+  it('renders sub-primitives: Text, Avatar, Badge, Button, Card', () => {
+    const { unmount } = render(
+      <Skeleton.Card testID="card-wrapper">
+        <Skeleton.Avatar size={48} />
+        <Skeleton.Badge width={70} />
+        <Skeleton.Text lines={3} />
+        <Skeleton.Button width={100} />
+      </Skeleton.Card>
+    );
+
+    const skeletons = screen.getAllByRole('progressbar');
+    expect(skeletons.length).toBeGreaterThanOrEqual(5);
+    unmount();
+  });
+
+  it('renders POSTerminalSkeleton with category bar and product grid cards', () => {
+    const { unmount } = render(<POSTerminalSkeleton cardCount={4} />);
+    expect(screen.getByTestId('pos-terminal-skeleton')).toBeDefined();
+    unmount();
+  });
+
+  it('renders InventorySkeleton with item cards', () => {
+    const { unmount } = render(<InventorySkeleton itemCount={3} />);
+    expect(screen.getByTestId('inventory-skeleton')).toBeDefined();
+    unmount();
+  });
+
+  it('renders SalesHistorySkeleton with transaction cards', () => {
+    const { unmount } = render(<SalesHistorySkeleton itemCount={3} />);
+    expect(screen.getByTestId('sales-history-skeleton')).toBeDefined();
+    unmount();
+  });
+
+  it('renders DashboardSkeleton with KPI overview grid and telemetry sections', () => {
+    const { unmount } = render(<DashboardSkeleton />);
+    expect(screen.getByTestId('dashboard-skeleton')).toBeDefined();
+    unmount();
+  });
+
+  it('renders StoreManagementSkeleton with store card previews', () => {
+    const { unmount } = render(<StoreManagementSkeleton storeCount={2} />);
+    expect(screen.getByTestId('store-management-skeleton')).toBeDefined();
+    unmount();
+  });
+
+  it('renders BatchInspectionSkeleton and StoreUsersSkeleton modal loaders', () => {
+    const { unmount: u1 } = render(<BatchInspectionSkeleton count={2} />);
+    expect(screen.getByTestId('batch-inspection-skeleton')).toBeDefined();
+    u1();
+
+    const { unmount: u2 } = render(<StoreUsersSkeleton count={2} />);
+    expect(screen.getByTestId('store-users-skeleton')).toBeDefined();
+    u2();
   });
 });
