@@ -141,24 +141,36 @@ export const StoreCard: React.FC<StoreCardProps> = ({
           <TouchableOpacity
             style={styles.actionLinkButton}
             onPress={() => onManageOperators && onManageOperators(item)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Manage staff for ${item.name}`}
           >
-            <Ionicons name="people-outline" size={14} color={Palette.emerald} />
+            <Ionicons name="people-outline" size={15} color={Palette.emerald} />
             <Text style={[styles.actionLinkText, { color: Palette.emerald }]}>Staff</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionLinkButton}
             onPress={() => onEditStore(item)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Edit details for ${item.name}`}
           >
-            <Ionicons name="create-outline" size={14} color={Palette.bluePrimary} />
+            <Ionicons name="create-outline" size={15} color={Palette.bluePrimary} />
             <Text style={styles.actionLinkText}>Edit Details</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionLinkButton}
             onPress={() => onQuickSignature(item)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Signature for ${item.name}`}
           >
-            <Ionicons name="pencil-outline" size={14} color={Palette.navyPrimary} />
+            <Ionicons name="pencil-outline" size={15} color={Palette.navyPrimary} />
             <Text style={[styles.actionLinkText, { color: Palette.navyPrimary }]}>
               {item.has_signature ? 'Signature' : 'Upload Signature'}
             </Text>
@@ -259,7 +271,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 16,
+    gap: 10,
     borderTopWidth: 1,
     borderTopColor: Palette.surfaceMuted,
     paddingTop: 10,
@@ -268,7 +280,11 @@ const styles = StyleSheet.create({
   actionLinkButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: Palette.surfaceLight,
   },
   actionLinkText: {
     fontSize: 12,

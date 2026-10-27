@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   KeyboardAvoidingView,
@@ -308,10 +309,12 @@ export const LoginScreen: React.FC = () => {
         >
           {/* Header Brand */}
           <View style={styles.brandContainer}>
-            <View style={styles.logoBadge}>
-              <Ionicons name="storefront" size={32} color="#FFFFFF" />
-            </View>
-            <Text style={styles.brandTitle}>SAVE SHOP</Text>
+            <Image
+              source={require('../../assets/images/splash-icon.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.brandTitle}>MY SAVE SHOP</Text>
             <Text style={styles.brandTagline}>
               Multi-Store Inventory & Retail Billing
             </Text>
@@ -391,15 +394,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 24,
   },
-  logoBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
-    backgroundColor: Palette.navyPrimary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-    ...Shadows.md,
+  logoImage: {
+    width: 80,
+    height: 80,
+    marginBottom: 12,
   },
   brandTitle: {
     ...Typography.h1,

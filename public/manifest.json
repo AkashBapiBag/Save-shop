@@ -1,7 +1,7 @@
 {
   "id": "/?source=pwa",
-  "name": "Save Shop - Smart Inventory & Billing",
-  "short_name": "Save Shop",
+  "name": "My Save Shop - Smart Inventory & Billing",
+  "short_name": "My Save Shop",
   "description": "Smart Inventory, Invoicing & Khata Book for retail businesses.",
   "start_url": "/",
   "scope": "/",

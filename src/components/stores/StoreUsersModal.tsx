@@ -11,7 +11,7 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
-  Image,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Store, StoreOperator, StoreInvitation } from '@/types/api';
@@ -20,7 +20,6 @@ import { Palette, Shadows } from '@/theme/designSystem';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { UserAvatar } from '@/components/ui/UserAvatar';
-import { SuccessModal } from '@/components/ui/SuccessModal';
 import { AuthContext } from '@/context/AuthContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
@@ -40,7 +39,6 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
   const auth = useContext(AuthContext);
   const user = auth?.user || null;
   const [emailInput, setEmailInput] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'user' | 'admin'>('user');
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [operators, setOperators] = useState<StoreOperator[]>([]);
   const [invitations, setInvitations] = useState<StoreInvitation[]>([]);
@@ -54,6 +52,7 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
     role?: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [successFeedback, setSuccessFeedback] = useState<{
     visible: boolean;
     title: string;
@@ -62,15 +61,21 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
     details: { label: string; value: string }[];
   } | null>(null);
 
+  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+  const cardHeight = Math.min(Math.round(screenHeight * 0.88), 660);
+  const cardWidth = Math.min(Math.round(screenWidth - 32), 520);
+
   const loadData = useCallback(async () => {
     if (!store?.store_id) return;
     setIsLoading(true);
+    setLoadError(null);
     try {
       const data = await storeApi.getStoreOperators(store.store_id);
       setOperators(data.operators || data.members || []);
       setInvitations(data.invitations || []);
     } catch (err: unknown) {
       logError('StoreUsersModal:loadData', err);
+      setLoadError('Could not load operators. Check your connection or store access.');
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +84,9 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
   useEffect(() => {
     if (visible && store) {
       setEmailInput('');
-      setSelectedRole('user');
+      setDeleteConfirmation(null);
+      setSuccessFeedback(null);
+      setLoadError(null);
       loadData();
     }
   }, [visible, store, loadData]);
@@ -100,39 +107,41 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
     try {
       const res = await storeApi.addStoreOperator(store.store_id, {
         email: trimmed,
-        role: selectedRole,
       });
       setEmailInput('');
-      setSelectedRole('user');
       await loadData();
       if (onUpdated) onUpdated();
 
       const title = res.status === 'assigned' ? 'Operator Added!' : 'Invitation Saved!';
       const badgeText = res.status === 'assigned' ? 'ACTIVE ACCESS' : 'PENDING SIGN-IN';
+      const assignedRole = res.operator?.role || res.invitation?.role || 'user';
+      const assignedRoleLabel = assignedRole === 'admin' ? 'Store Administrator' : 'Staff / Cashier';
 
-      setSuccessFeedback({
-        visible: true,
-        title,
-        message: res.message,
-        badgeText,
-        details: [
-          { label: 'Store', value: store.name },
-          { label: 'Operator Email', value: trimmed },
-          {
-            label: 'Assigned Role',
-            value: selectedRole === 'admin' ? 'Store Administrator' : 'Staff / Cashier',
-          },
-          {
-            label: 'Access Mode',
-            value: res.status === 'assigned' ? 'Instant Access' : 'Auto-assign on login',
-          },
-        ],
-      });
+      if (Platform.OS === 'web') {
+        setSuccessFeedback({
+          visible: true,
+          title,
+          message: res.message,
+          badgeText,
+          details: [
+            { label: 'Store', value: store.name },
+            { label: 'Operator Email', value: trimmed },
+            {
+              label: 'Assigned Role',
+              value: assignedRoleLabel,
+            },
+            {
+              label: 'Access Mode',
+              value: res.status === 'assigned' ? 'Instant Access' : 'Auto-assign on login',
+            },
+          ],
+        });
 
-      Alert.alert(
-        res.status === 'assigned' ? 'Staff Added' : 'Invitation Saved',
-        res.message
-      );
+        Alert.alert(
+          res.status === 'assigned' ? 'Staff Added' : 'Invitation Saved',
+          res.message
+        );
+      }
     } catch (err: unknown) {
       showErrorAlert(err, 'Failed to Add Staff', 'Could not assign or invite staff member.');
     } finally {
@@ -166,34 +175,38 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
         await storeApi.removeStoreOperator(store.store_id, deleteConfirmation.id);
         await loadData();
         if (onUpdated) onUpdated();
-        setSuccessFeedback({
-          visible: true,
-          title: deleteConfirmation.role === 'admin' ? 'Administrator Removed' : 'Staff Member Removed',
-          message: `Access for ${deleteConfirmation.email} has been removed from ${store.name}.`,
-          badgeText: 'ACCESS REMOVED',
-          details: [
-            { label: 'Store', value: store.name },
-            { label: 'Email', value: deleteConfirmation.email },
-            {
-              label: 'Role Removed',
-              value: deleteConfirmation.role === 'admin' ? 'Store Administrator' : 'Staff / Cashier',
-            },
-          ],
-        });
+        if (Platform.OS === 'web') {
+          setSuccessFeedback({
+            visible: true,
+            title: deleteConfirmation.role === 'admin' ? 'Administrator Removed' : 'Staff Member Removed',
+            message: `Access for ${deleteConfirmation.email} has been removed from ${store.name}.`,
+            badgeText: 'ACCESS REMOVED',
+            details: [
+              { label: 'Store', value: store.name },
+              { label: 'Email', value: deleteConfirmation.email },
+              {
+                label: 'Role Removed',
+                value: deleteConfirmation.role === 'admin' ? 'Store Administrator' : 'Staff / Cashier',
+              },
+            ],
+          });
+        }
       } else {
         await storeApi.revokeStoreInvitation(store.store_id, deleteConfirmation.id);
         await loadData();
         if (onUpdated) onUpdated();
-        setSuccessFeedback({
-          visible: true,
-          title: 'Invitation Cancelled',
-          message: `Pending invitation for ${deleteConfirmation.email} was removed.`,
-          badgeText: 'CANCELLED',
-          details: [
-            { label: 'Store', value: store.name },
-            { label: 'Invited Email', value: deleteConfirmation.email },
-          ],
-        });
+        if (Platform.OS === 'web') {
+          setSuccessFeedback({
+            visible: true,
+            title: 'Invitation Cancelled',
+            message: `Pending invitation for ${deleteConfirmation.email} was removed.`,
+            badgeText: 'CANCELLED',
+            details: [
+              { label: 'Store', value: store.name },
+              { label: 'Invited Email', value: deleteConfirmation.email },
+            ],
+          });
+        }
       }
       setDeleteConfirmation(null);
     } catch (err: unknown) {
@@ -218,7 +231,13 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.overlay}
       >
-        <View style={styles.modalCard}>
+        <TouchableOpacity
+          style={styles.backdropDismiss}
+          activeOpacity={1}
+          onPress={onClose}
+          accessibilityLabel="Dismiss dialog"
+        />
+        <View style={[styles.modalCard, { width: cardWidth, height: cardHeight }]}>
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -255,9 +274,9 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
                   <Ionicons name="person-add" size={15} color={Palette.bluePrimary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sectionTitle}>Add Staff by Email</Text>
+                  <Text style={styles.sectionTitle}>Add Staff / Operator by Email</Text>
                   <Text style={styles.sectionSubtitle}>
-                    Grant store access to a staff member or cashier
+                    Role (Admin or Staff) is automatically determined from database
                   </Text>
                 </View>
               </View>
@@ -328,62 +347,30 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
                 </TouchableOpacity>
               </View>
 
-              {/* Role Selection Pill Selector */}
-              <View style={styles.roleSelectSection}>
-                <Text style={styles.roleSelectLabel}>Assign Role:</Text>
-                <View style={styles.roleOptionsContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.roleOptionButton,
-                      selectedRole === 'user' && styles.roleOptionButtonActiveUser,
-                    ]}
-                    onPress={() => setSelectedRole('user')}
-                    activeOpacity={0.7}
-                    accessibilityLabel="Select Staff / Cashier role"
-                  >
-                    <Ionicons
-                      name="cart-outline"
-                      size={14}
-                      color={selectedRole === 'user' ? Palette.bluePrimary : Palette.textSecondary}
-                    />
-                    <Text
-                      style={[
-                        styles.roleOptionText,
-                        selectedRole === 'user' && styles.roleOptionTextActiveUser,
-                      ]}
-                    >
-                      Staff / Cashier
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.roleOptionButton,
-                      selectedRole === 'admin' && styles.roleOptionButtonActiveAdmin,
-                    ]}
-                    onPress={() => setSelectedRole('admin')}
-                    activeOpacity={0.7}
-                    accessibilityLabel="Select Store Admin role"
-                  >
-                    <Ionicons
-                      name="shield-outline"
-                      size={14}
-                      color={selectedRole === 'admin' ? '#7C3AED' : Palette.textSecondary}
-                    />
-                    <Text
-                      style={[
-                        styles.roleOptionText,
-                        selectedRole === 'admin' && styles.roleOptionTextActiveAdmin,
-                      ]}
-                    >
-                      Store Admin
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+              {/* Informational Hint: Role is DB-driven, 1 owner constraint */}
+              <View style={styles.roleHintBox}>
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={15}
+                  color={Palette.bluePrimary}
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.roleHintText}>
+                  User role (Admin or Staff) is automatically determined from their database account. A shop has 1 Owner and can have multiple Admins.
+                </Text>
               </View>
             </View>
 
-            {isLoading ? (
+            {loadError ? (
+              <View style={styles.errorCard}>
+                <Ionicons name="alert-circle-outline" size={26} color={Palette.rose} />
+                <Text style={styles.errorCardText}>{loadError}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={loadData} activeOpacity={0.7}>
+                  <Ionicons name="refresh" size={14} color={Palette.bluePrimary} />
+                  <Text style={styles.retryButtonText}>Retry Loading</Text>
+                </TouchableOpacity>
+              </View>
+            ) : isLoading ? (
               <View style={styles.centerLoading}>
                 <ActivityIndicator size="large" color={Palette.bluePrimary} />
                 <Text style={styles.loadingText}>Loading store operators...</Text>
@@ -641,21 +628,54 @@ export const StoreUsersModal: React.FC<StoreUsersModalProps> = ({
               </View>
             </View>
           )}
+          {/* In-Modal Success Feedback Overlay (Desktop Web only) */}
+          {Platform.OS === 'web' && successFeedback && (
+            <View style={styles.confirmOverlay}>
+              <View style={styles.confirmCard}>
+                <View style={[styles.confirmIconCircle, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}>
+                  <Ionicons name="checkmark-circle" size={28} color={Palette.emerald} />
+                </View>
+
+                {successFeedback.badgeText ? (
+                  <View style={{ marginBottom: 8 }}>
+                    <Badge label={successFeedback.badgeText} variant="success" size="sm" />
+                  </View>
+                ) : null}
+
+                <Text style={styles.confirmTitle}>{successFeedback.title}</Text>
+                <Text style={styles.confirmMessage}>{successFeedback.message}</Text>
+
+                {successFeedback.details && successFeedback.details.length > 0 && (
+                  <View style={styles.successDetailsBox}>
+                    {successFeedback.details.map((item, idx) => (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.successDetailRow,
+                          idx < successFeedback.details.length - 1 ? styles.successDetailRowBorder : null,
+                        ]}
+                      >
+                        <Text style={styles.successDetailLabel}>{item.label}</Text>
+                        <Text style={styles.successDetailValue} numberOfLines={1}>
+                          {item.value}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={styles.successDoneButton}
+                  onPress={() => setSuccessFeedback(null)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.successDoneButtonText}>Great, Got It</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
-
-      {/* Modern In-App Success Feedback Modal */}
-      {successFeedback && (
-        <SuccessModal
-          visible={successFeedback.visible}
-          title={successFeedback.title}
-          message={successFeedback.message}
-          badgeText={successFeedback.badgeText}
-          details={successFeedback.details}
-          primaryButtonText="Great, Got It"
-          onClose={() => setSuccessFeedback(null)}
-        />
-      )}
     </Modal>
   );
 };
@@ -668,16 +688,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  modalCard: {
+  backdropDismiss: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
-    maxWidth: 520,
+    height: '100%',
+  },
+  modalCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    maxHeight: '90%',
     overflow: 'hidden',
     position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
     ...Shadows.lg,
   },
   header: {
@@ -723,7 +747,6 @@ const styles = StyleSheet.create({
   },
   scrollArea: {
     flex: 1,
-    flexShrink: 1,
   },
   scrollContent: {
     padding: 20,
@@ -827,51 +850,23 @@ const styles = StyleSheet.create({
   addButtonTextDisabled: {
     color: Palette.textMuted,
   },
-  roleSelectSection: {
-    marginTop: 12,
-  },
-  roleSelectLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Palette.textSecondary,
-    marginBottom: 6,
-  },
-  roleOptionsContainer: {
+  roleHintBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  roleOptionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: Palette.borderLight,
-  },
-  roleOptionButtonActiveUser: {
     backgroundColor: Palette.blueSoft,
-    borderColor: Palette.bluePrimary,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
   },
-  roleOptionButtonActiveAdmin: {
-    backgroundColor: '#F3E8FF',
-    borderColor: '#9333EA',
-  },
-  roleOptionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Palette.textSecondary,
-  },
-  roleOptionTextActiveUser: {
-    color: Palette.bluePrimary,
-    fontWeight: '700',
-  },
-  roleOptionTextActiveAdmin: {
-    color: '#7C3AED',
-    fontWeight: '700',
+  roleHintText: {
+    flex: 1,
+    fontSize: 11.5,
+    color: Palette.navyPrimary,
+    lineHeight: 16,
+    fontWeight: '500',
   },
   tipBox: {
     flexDirection: 'row',
@@ -1166,6 +1161,86 @@ const styles = StyleSheet.create({
   },
   confirmDeleteButtonText: {
     fontSize: 13.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  errorCard: {
+    backgroundColor: '#FFF1F2',
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 14,
+  },
+  errorCardText: {
+    fontSize: 12.5,
+    color: Palette.rose,
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 10,
+    fontWeight: '600',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Palette.bluePrimary,
+  },
+  successDetailsBox: {
+    width: '100%',
+    backgroundColor: Palette.surfaceLight,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  successDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  successDetailRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Palette.borderLight,
+  },
+  successDetailLabel: {
+    fontSize: 12,
+    color: Palette.textSecondary,
+    fontWeight: '500',
+  },
+  successDetailValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Palette.navyPrimary,
+    maxWidth: '60%',
+    textAlign: 'right',
+  },
+  successDoneButton: {
+    width: '100%',
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: Palette.emerald,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.sm,
+  },
+  successDoneButtonText: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
   },

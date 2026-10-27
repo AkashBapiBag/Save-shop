@@ -257,7 +257,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
           </View>
           <View style={{ marginLeft: 8, flex: 1, minWidth: 0 }}>
             <Text style={styles.screenHeaderTitle} numberOfLines={1}>Billing Counter</Text>
-            <Text style={styles.screenHeaderSub} numberOfLines={1}>{activeStore?.name || 'Save Shop'}</Text>
+            <Text style={styles.screenHeaderSub} numberOfLines={1}>{activeStore?.name || 'My Save Shop'}</Text>
           </View>
         </View>
 

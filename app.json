@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Save-shop",
+    "name": "My Save Shop",
     "slug": "Save-shop",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,7 +13,7 @@
     "android": {
       "package": "com.saveshop.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0F3968",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -38,8 +38,8 @@
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png",
-      "name": "Save Shop",
-      "shortName": "SaveShop",
+      "name": "My Save Shop",
+      "shortName": "My Save Shop",
       "description": "Smart Inventory, Invoicing & Khata Book",
       "themeColor": "#208AEF",
       "backgroundColor": "#FFFFFF",
@@ -51,9 +51,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0F3968",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 120
         }
       ],
       "expo-sharing",

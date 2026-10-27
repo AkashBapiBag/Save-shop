@@ -19,7 +19,7 @@ describe('Offline Handling & ErrorBoundary Suite', () => {
       render(<OfflineScreen />);
 
       expect(screen.getByText('Device is Offline')).toBeTruthy();
-      expect(screen.getByText(/SaveShop requires an active internet connection/i)).toBeTruthy();
+      expect(screen.getByText(/My Save Shop requires an active internet connection/i)).toBeTruthy();
       expect(screen.getByText('DISCONNECTED')).toBeTruthy();
       expect(screen.getByText('Troubleshooting Checklist')).toBeTruthy();
       expect(screen.getByText('Check if your Wi-Fi or Cellular Data is enabled')).toBeTruthy();
@@ -172,7 +172,7 @@ describe('Offline Handling & ErrorBoundary Suite', () => {
       );
 
       expect(screen.getByText('Connection Interrupted')).toBeTruthy();
-      expect(screen.getByText(/SaveShop lost connection to the server/i)).toBeTruthy();
+      expect(screen.getByText(/My Save Shop lost connection to the server/i)).toBeTruthy();
       expect(screen.getByText('Try Again')).toBeTruthy();
 
       spy.mockRestore();

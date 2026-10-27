@@ -336,7 +336,7 @@ describe('screens/LoginScreen.tsx', () => {
       </AuthProvider>
     );
 
-    expect(await screen.findByText('SAVE SHOP')).toBeDefined();
+    expect(await screen.findByText('MY SAVE SHOP')).toBeDefined();
     expect(await screen.findByText('Terminal Sign In')).toBeDefined();
     expect(screen.getByText('Sign in with Google')).toBeDefined();
   });
@@ -414,6 +414,6 @@ describe('app/_layout.tsx', () => {
   it('renders RootLayout properly', async () => {
     render(<RootLayout />);
     // With no token, defaults to LoginScreen
-    expect(await screen.findByText('SAVE SHOP')).toBeDefined();
+    expect(await screen.findByText('MY SAVE SHOP')).toBeDefined();
   });
 });

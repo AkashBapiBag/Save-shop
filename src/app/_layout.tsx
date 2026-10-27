@@ -15,6 +15,9 @@ import { Palette } from '@/theme/designSystem';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+// Complete pending auth sessions as early as possible on all platforms (Android, iOS, Web)
+WebBrowser.maybeCompleteAuthSession();
+
 // Complete pending auth sessions as early as possible on Web
 if (Platform.OS === 'web' && typeof window !== 'undefined') {
   try {
@@ -148,7 +151,7 @@ function RootContent() {
       return (
         <OfflineScreen
           title="Device is Offline"
-          message="SaveShop requires an active internet connection to authenticate your account and securely synchronize your stores."
+          message="My Save Shop requires an active internet connection to authenticate your account and securely synchronize your stores."
           onRetry={async () => {
             await checkConnection();
           }}

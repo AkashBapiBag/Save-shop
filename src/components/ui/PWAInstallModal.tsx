@@ -48,7 +48,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
             <Ionicons name="download-outline" size={20} color="#FFFFFF" />
           </View>
           <View style={styles.cardTextBox}>
-            <Text style={styles.cardTitle}>Install Save Shop App</Text>
+            <Text style={styles.cardTitle}>Install My Save Shop App</Text>
             <Text style={styles.cardSubtitle}>
               Fast, fullscreen offline-capable home screen app
             </Text>
@@ -112,7 +112,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
             </View>
 
             <Text style={styles.modalSubtitle}>
-              To install Save Shop as an app on your iPhone or iPad:
+              To install My Save Shop as an app on your iPhone or iPad:
             </Text>
 
             <View style={styles.stepRow}>
@@ -146,7 +146,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
               <View style={styles.stepContent}>
                 <Text style={styles.stepTitle}>Tap &quot;Add&quot;</Text>
                 <Text style={styles.stepDesc}>
-                  Confirm in the top-right corner. Save Shop will appear on your home screen!
+                  Confirm in the top-right corner. My Save Shop will appear on your home screen!
                 </Text>
               </View>
             </View>

@@ -19,7 +19,7 @@ export interface NativeSignInResult {
  * Universal fallback interface for native Google Sign-In.
  */
 export function isNativeGoogleSignInAvailable(): boolean {
-  return Platform.OS !== 'web';
+  return false;
 }
 
 export function configureGoogleSignIn(_webClientId: string): void {}

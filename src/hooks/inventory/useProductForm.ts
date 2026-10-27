@@ -67,7 +67,6 @@ export function useProductForm({
         min_stock_alert_threshold: Number(newMinThreshold) || 10,
       });
 
-      Alert.alert('Success', `Product '${newName.trim()}' in category '${finalCategory}' registered successfully.`);
       setCreateProductModalVisible(false);
       resetProductForm();
       onProductCreated?.();

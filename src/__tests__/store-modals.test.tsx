@@ -794,7 +794,7 @@ describe('components/stores/StoreUsersModal.tsx', () => {
     expect(await screen.findByText('Administrator Removed')).toBeDefined();
   });
 
-  it('allows selecting Store Admin role and submits role admin when adding staff', async () => {
+  it('adds staff/admin by email without role selector, relying on DB account role', async () => {
     const onUpdatedMock = vi.fn();
     vi.mocked(storeApi.getStoreOperators).mockResolvedValueOnce({
       store_id: 's-1',
@@ -814,11 +814,12 @@ describe('components/stores/StoreUsersModal.tsx', () => {
       );
     });
 
-    // Select the "Store Admin" role pill
-    const adminRoleBtn = screen.getByText('Store Admin');
-    await act(async () => {
-      fireEvent.click(adminRoleBtn);
-    });
+    // Ensure role selector pills (Staff / Cashier vs Store Admin) are removed
+    expect(screen.queryByLabelText('Select Staff / Cashier role')).toBeNull();
+    expect(screen.queryByLabelText('Select Store Admin role')).toBeNull();
+    expect(
+      screen.getByText(/Role \(Admin or Staff\) is automatically determined from database/)
+    ).toBeDefined();
 
     // Enter email address
     const emailInput = screen.getByPlaceholderText('cashier@example.com');
@@ -832,9 +833,9 @@ describe('components/stores/StoreUsersModal.tsx', () => {
       fireEvent.click(addBtn);
     });
 
+    // Only email is submitted - role is determined by database
     expect(storeApi.addStoreOperator).toHaveBeenCalledWith('s-1', {
       email: 'newadmin@saveshop.com',
-      role: 'admin',
     });
   });
 

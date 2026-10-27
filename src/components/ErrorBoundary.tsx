@@ -81,7 +81,7 @@ export class ErrorBoundary extends Component<Props, State> {
         return (
           <OfflineScreen
             title="Connection Interrupted"
-            message="SaveShop lost connection to the server while loading this screen. Please check your internet connection and tap retry."
+            message="My Save Shop lost connection to the server while loading this screen. Please check your internet connection and tap retry."
             onRetry={this.handleReset}
           />
         );

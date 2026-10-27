@@ -447,7 +447,7 @@ describe('hooks/inventory/useProductForm.ts', () => {
         cost_price: 50,
       })
     );
-    expect(alertSpy).toHaveBeenCalledWith('Success', expect.stringContaining('Green Tea'));
+    expect(alertSpy).not.toHaveBeenCalled();
     expect(onCreatedMock).toHaveBeenCalled();
     expect(result.current.createProductModalVisible).toBe(false);
   });

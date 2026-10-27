@@ -107,7 +107,7 @@ describe('PWA Functionality & Components', () => {
         window.dispatchEvent(mockEvent);
       });
 
-      expect(screen.getByText('Install Save Shop App')).toBeTruthy();
+      expect(screen.getByText('Install My Save Shop App')).toBeTruthy();
       expect(screen.getByText('Fast, fullscreen offline-capable home screen app')).toBeTruthy();
     });
   });

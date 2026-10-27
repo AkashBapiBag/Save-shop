@@ -26,7 +26,7 @@ export interface OfflineScreenProps {
 
 export const OfflineScreen: React.FC<OfflineScreenProps> = ({
   title = 'Device is Offline',
-  message = 'SaveShop requires an active internet connection to securely process transactions, inspect product batches, and synchronize inventory.',
+  message = 'My Save Shop requires an active internet connection to securely process transactions, inspect product batches, and synchronize inventory.',
   onRetry,
   compact = false,
   showDismiss = false,

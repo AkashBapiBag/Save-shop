@@ -1,4 +1,5 @@
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { TurboModuleRegistry, NativeModules } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 export interface NativeSignInResult {
   success: boolean;
@@ -18,10 +19,51 @@ export interface NativeSignInResult {
 let isConfigured = false;
 
 /**
- * Returns true since this module only runs on native (Android/iOS).
+ * Safely resolves the @react-native-google-signin module without throwing
+ * an unhandled TurboModuleRegistry Invariant Violation when running in
+ * Expo Go or environments where RNGoogleSignin is not compiled into the native binary.
+ */
+function getGoogleSigninModule(): any {
+  try {
+    if (process.env.NODE_ENV === 'test') {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('@react-native-google-signin/google-signin');
+    }
+
+    // Expo Go does not contain custom native code
+    if (
+      Constants.appOwnership === 'expo' ||
+      Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+    ) {
+      return null;
+    }
+
+    // Verify native binary registration before requiring to prevent TurboModuleRegistry crash
+    const hasTurboModule = !!TurboModuleRegistry?.get?.('RNGoogleSignin');
+    const hasBridgeModule = !!NativeModules?.RNGoogleSignin;
+    if (!hasTurboModule && !hasBridgeModule) {
+      return null;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('@react-native-google-signin/google-signin');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns true if running in a standalone or development build where the
+ * native @react-native-google-signin module is properly linked.
+ * Returns false inside Expo Go where native modules are not linked.
  */
 export function isNativeGoogleSignInAvailable(): boolean {
-  return true;
+  try {
+    const mod = getGoogleSigninModule();
+    return Boolean(mod?.GoogleSignin && typeof mod.GoogleSignin.configure === 'function');
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -32,7 +74,9 @@ export function isNativeGoogleSignInAvailable(): boolean {
 export function configureGoogleSignIn(webClientId: string): void {
   if (isConfigured || !webClientId) return;
   try {
-    GoogleSignin.configure({
+    const mod = getGoogleSigninModule();
+    if (!mod?.GoogleSignin) return;
+    mod.GoogleSignin.configure({
       webClientId,
       scopes: ['profile', 'email'],
       offlineAccess: false,
@@ -48,12 +92,22 @@ export function configureGoogleSignIn(webClientId: string): void {
  * Returns the verified idToken without launching any browser tab or web page.
  */
 export async function signInWithNativeGoogle(): Promise<NativeSignInResult> {
+  const mod = getGoogleSigninModule();
+  if (!mod?.GoogleSignin) {
+    return {
+      success: false,
+      error: 'Native Google Sign-In is not supported in Expo Go. Please use the development build or browser sign-in.',
+    };
+  }
+
+  const { GoogleSignin, statusCodes } = mod;
+
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const response = await GoogleSignin.signIn();
 
-    if (response.type === 'success') {
-      const idToken = response.data.idToken;
+    if (response?.type === 'success') {
+      const idToken = response.data?.idToken;
       if (!idToken) {
         return {
           success: false,
@@ -63,7 +117,7 @@ export async function signInWithNativeGoogle(): Promise<NativeSignInResult> {
       return {
         success: true,
         idToken,
-        user: response.data.user
+        user: response.data?.user
           ? {
               id: response.data.user.id,
               name: response.data.user.name,
@@ -74,7 +128,7 @@ export async function signInWithNativeGoogle(): Promise<NativeSignInResult> {
             }
           : undefined,
       };
-    } else if (response.type === 'cancelled') {
+    } else if (response?.type === 'cancelled') {
       return {
         success: false,
         cancelled: true,
@@ -86,11 +140,14 @@ export async function signInWithNativeGoogle(): Promise<NativeSignInResult> {
       error: 'Google Sign-In response was empty.',
     };
   } catch (error: any) {
-    if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+    if (error?.code === statusCodes?.SIGN_IN_CANCELLED || error?.code === 'SIGN_IN_CANCELLED') {
       return { success: false, cancelled: true };
-    } else if (error.code === statusCodes.IN_PROGRESS) {
+    } else if (error?.code === statusCodes?.IN_PROGRESS || error?.code === 'IN_PROGRESS') {
       return { success: false, error: 'Sign-in is already in progress.' };
-    } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+    } else if (
+      error?.code === statusCodes?.PLAY_SERVICES_NOT_AVAILABLE ||
+      error?.code === 'PLAY_SERVICES_NOT_AVAILABLE'
+    ) {
       return {
         success: false,
         error: 'Google Play Services is not available or outdated on this device.',
@@ -108,7 +165,10 @@ export async function signInWithNativeGoogle(): Promise<NativeSignInResult> {
  */
 export async function signOutNativeGoogle(): Promise<void> {
   try {
-    await GoogleSignin.signOut();
+    const mod = getGoogleSigninModule();
+    if (mod?.GoogleSignin) {
+      await mod.GoogleSignin.signOut();
+    }
   } catch (err) {
     console.warn('[NativeGoogleAuth] SignOut error:', err);
   }

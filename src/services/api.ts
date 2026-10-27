@@ -101,28 +101,44 @@ export const getProductionApiUrl = (): string => {
 };
 
 export const getLocalDevApiUrl = (): string => {
+  // In Web browser: use configured dev URL or current hostname with port 8000
+  if (Platform.OS === 'web') {
+    const devUrl = process.env.EXPO_PUBLIC_DEV_API_URL;
+    if (devUrl && typeof devUrl === 'string' && devUrl.trim() !== '') {
+      return devUrl.trim().replace(/\/+$/, '');
+    }
+    if (typeof window !== 'undefined' && window.location?.hostname) {
+      const host = window.location.hostname;
+      if (window.location.port === '8000') {
+        return window.location.origin.replace(/\/+$/, '');
+      }
+      return `http://${host}:8000`;
+    }
+  }
+
+  // Extract machine LAN IP from Metro hostUri if available (e.g., '192.168.29.252:8081')
+  const hostUri = Constants.expoConfig?.hostUri;
+  const metroIp = hostUri ? hostUri.split(':')[0] : null;
+
   // Explicit dev URL if provided in .env
   const devUrl = process.env.EXPO_PUBLIC_DEV_API_URL;
   if (devUrl && typeof devUrl === 'string' && devUrl.trim() !== '') {
-    return devUrl.trim().replace(/\/+$/, '');
-  }
-
-  // In Web browser: use current hostname with port 8000
-  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname) {
-    const host = window.location.hostname;
-    if (window.location.port === '8000') {
-      return window.location.origin.replace(/\/+$/, '');
+    const trimmed = devUrl.trim().replace(/\/+$/, '');
+    // On native mobile devices, "localhost" or "127.0.0.1" refers to the phone itself, not the dev machine
+    if (Platform.OS !== 'web' && (trimmed.includes('localhost') || trimmed.includes('127.0.0.1'))) {
+      if (metroIp && metroIp !== 'localhost' && metroIp !== '127.0.0.1') {
+        return trimmed.replace('localhost', metroIp).replace('127.0.0.1', metroIp);
+      }
+      if (Platform.OS === 'android') {
+        return trimmed.replace('localhost', '10.0.2.2').replace('127.0.0.1', '10.0.2.2');
+      }
     }
-    return `http://${host}:8000`;
+    return trimmed;
   }
 
   // In Expo Go / Native dev client: extract machine LAN IP from Metro hostUri
-  const hostUri = Constants.expoConfig?.hostUri;
-  if (hostUri && !hostUri.includes('expo-dev-client')) {
-    const ip = hostUri.split(':')[0];
-    if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
-      return `http://${ip}:8000`;
-    }
+  if (metroIp && metroIp !== 'localhost' && metroIp !== '127.0.0.1') {
+    return `http://${metroIp}:8000`;
   }
 
   // Android emulator loopback to host machine

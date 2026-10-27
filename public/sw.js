@@ -82,7 +82,7 @@ self.addEventListener('fetch', (event) => {
           }
         }
 
-        return new Response('Offline - Save Shop', {
+        return new Response('Offline - My Save Shop', {
           status: 503,
           statusText: 'Service Unavailable',
           headers: new Headers({ 'Content-Type': 'text/plain' })

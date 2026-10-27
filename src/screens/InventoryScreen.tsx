@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -68,10 +67,6 @@ export const InventoryScreen: React.FC = () => {
         store_id: activeStore?.store_id,
       });
 
-      Alert.alert(
-        'Success',
-        `'${payload.name}' was added successfully.`
-      );
       setCreateProductModalVisible(false);
       void loadCatalog(false);
     } catch (err: unknown) {
@@ -90,10 +85,6 @@ export const InventoryScreen: React.FC = () => {
         store_id: activeStore?.store_id,
       });
 
-      Alert.alert(
-        'Stock Added',
-        `Added ${payload.quantity} units to batch '${payload.batch_identifier}'.`
-      );
       setReceiveStockModalVisible(false);
       void loadCatalog(false);
     } catch (err: unknown) {
@@ -111,12 +102,6 @@ export const InventoryScreen: React.FC = () => {
         ...payload,
         store_id: activeStore?.store_id,
       });
-
-      const totalQty = payload.batches.reduce((acc, curr) => acc + Number(curr.quantity), 0);
-      Alert.alert(
-        'Stock Added Successfully',
-        `Added ${payload.batches.length} products (${totalQty} total units) to your stock.`
-      );
 
       setReceiveStockModalVisible(false);
       void loadCatalog(false);
