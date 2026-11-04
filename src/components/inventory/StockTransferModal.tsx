@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { SearchableProductModal } from '@/components/SearchableProductSelect';
 import { SuccessModal } from '@/components/ui/SuccessModal';
+import { StockTransferSkeleton, TransferHistorySkeleton } from '@/components/ui/Skeleton';
 import { showErrorAlert } from '@/utils/errorHandler';
 
 export interface StockTransferModalProps {
@@ -578,13 +579,14 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
                   </Text>
                 </View>
               ) : (
-                <ScrollView
-                  style={styles.bodyScroll}
-                  contentContainerStyle={styles.bodyContent}
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {/* Destination Store Selector */}
+                <View style={{ flex: 1 }}>
+                  <ScrollView
+                    style={styles.bodyScroll}
+                    contentContainerStyle={styles.bodyContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {/* Destination Store Selector */}
                   <View style={styles.destStoreSection}>
                     <Text style={styles.destStoreSectionLabel}>TRANSFER TO (DESTINATION STORE)</Text>
                     <TouchableOpacity
@@ -641,10 +643,7 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
 
                   {/* Loading / Empty State / Items List */}
                   {isLoadingProducts ? (
-                    <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="small" color={Palette.bluePrimary} />
-                      <Text style={styles.loadingText}>Loading products from {sourceStore?.name}...</Text>
-                    </View>
+                    <StockTransferSkeleton count={3} />
                   ) : transferItems.length === 0 ? (
                     <TouchableOpacity
                       style={styles.emptyAddBox}
@@ -795,7 +794,7 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
                     />
                   </View>
 
-                  {/* Summary Card & Confirmation */}
+                  {/* Summary Card */}
                   <View style={styles.summaryCard}>
                     <Text style={styles.summaryTitle}>TRANSFER SUMMARY</Text>
                     <View style={styles.summaryRow}>
@@ -812,30 +811,48 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
                       <Text style={styles.summaryLabel}>Initiated By:</Text>
                       <Text style={styles.summaryValue}>{user?.name || 'Administrator'}</Text>
                     </View>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.confirmTransferBtn,
-                        (!canTransfer || isSubmitting) && styles.confirmBtnDisabled,
-                      ]}
-                      activeOpacity={0.8}
-                      disabled={!canTransfer || isSubmitting}
-                      onPress={handleSubmitTransfer}
-                    >
-                      {isSubmitting ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      ) : (
-                        <>
-                          <Ionicons name="swap-horizontal" size={18} color="#FFFFFF" />
-                          <Text style={styles.confirmTransferBtnText}>
-                            {canTransfer ? `Confirm & Transfer (${totalItemsCount} Items)` : 'Confirm & Transfer Stock'}
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
                   </View>
                 </ScrollView>
-              )
+
+                {/* Fixed Bottom Action Footer */}
+                <View style={styles.fixedFooter}>
+                  <View style={styles.fixedFooterStats}>
+                    <View>
+                      <Text style={styles.fixedFooterLabel}>Items to Move</Text>
+                      <Text style={styles.fixedFooterValue}>
+                        {totalItemsCount} {totalItemsCount === 1 ? 'product' : 'products'} • {totalQuantity.toFixed(2)} units
+                      </Text>
+                    </View>
+                    <Badge
+                      label={canTransfer ? 'Ready to Transfer' : 'Select Product & Store'}
+                      variant={canTransfer ? 'success' : 'neutral'}
+                      size="sm"
+                    />
+                  </View>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmTransferBtn,
+                      (!canTransfer || isSubmitting) && styles.confirmBtnDisabled,
+                    ]}
+                    activeOpacity={0.8}
+                    disabled={!canTransfer || isSubmitting}
+                    onPress={handleSubmitTransfer}
+                  >
+                    {isSubmitting ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="swap-horizontal" size={18} color="#FFFFFF" />
+                        <Text style={styles.confirmTransferBtnText}>
+                          {canTransfer ? `Confirm & Transfer (${totalItemsCount} Items)` : 'Confirm & Transfer Stock'}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )
             ) : (
               /* History & Inward/Outward Logs View */
               <View style={styles.historyContainer}>
@@ -898,10 +915,7 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
 
                 {/* History List */}
                 {isLoadingHistory ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color={Palette.bluePrimary} />
-                    <Text style={styles.loadingText}>Fetching transfer history...</Text>
-                  </View>
+                  <TransferHistorySkeleton count={3} />
                 ) : transfers.length === 0 ? (
                   <View style={styles.emptyHistoryBox}>
                     <View style={styles.emptyAddIconCircle}>
@@ -1497,6 +1511,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Palette.navyPrimary,
   },
+  fixedFooter: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: Palette.borderLight,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 14,
+    ...Shadows.sm,
+  },
+  fixedFooterStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  fixedFooterLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: Palette.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  fixedFooterValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Palette.navyPrimary,
+    marginTop: 1,
+  },
   confirmTransferBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1505,7 +1547,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     gap: 8,
-    marginTop: 6,
     ...Shadows.md,
   },
   confirmBtnDisabled: {

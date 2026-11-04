@@ -18,6 +18,8 @@ export const POSActiveCustomerBanner: React.FC<POSActiveCustomerBannerProps> = (
 }) => {
   const isGuest = customer.customer_id === 'guest';
   const totalSpentNum = parseFloat(String(customer.total_spent || 0));
+  const dueAmount = parseFloat(String(customer.total_due || 0));
+  const advanceAmount = parseFloat(String(customer.advance_balance || 0));
 
   return (
     <View style={styles.bannerContainer}>
@@ -41,6 +43,16 @@ export const POSActiveCustomerBanner: React.FC<POSActiveCustomerBannerProps> = (
               {isGuest && (
                 <View style={styles.guestBadge}>
                   <Text style={styles.guestBadgeText}>Walk-in</Text>
+                </View>
+              )}
+              {dueAmount > 0 && (
+                <View style={styles.dueBadge}>
+                  <Text style={styles.dueBadgeText}>₹{dueAmount.toFixed(0)} Due</Text>
+                </View>
+              )}
+              {advanceAmount > 0 && dueAmount <= 0 && (
+                <View style={styles.advanceBadge}>
+                  <Text style={styles.advanceBadgeText}>₹{advanceAmount.toFixed(0)} Adv</Text>
                 </View>
               )}
             </View>
@@ -148,6 +160,34 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: Palette.bluePrimary,
+  },
+  dueBadge: {
+    backgroundColor: Palette.roseLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+  },
+  dueBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Palette.rose,
+  },
+  advanceBadge: {
+    backgroundColor: Palette.emeraldLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  advanceBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Palette.emeraldDark,
   },
   subRow: {
     flexDirection: 'row',

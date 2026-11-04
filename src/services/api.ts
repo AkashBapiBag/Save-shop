@@ -35,6 +35,8 @@ import {
   Customer,
   CustomerCreateRequest,
   CustomerHistoryResponse,
+  CustomerPaymentCreateRequest,
+  CustomerPaymentResponse,
   StockTransfer,
   StockTransferCreateRequest,
   StockTransferListParams,
@@ -530,10 +532,11 @@ export const inventoryApi = {
 // Customers Directory (Phone Book) Endpoints
 // -------------------------------------------------------------
 export const customerApi = {
-  listCustomers: async (params?: { search?: string; sort_by?: string; limit?: number; offset?: number }): Promise<Customer[]> => {
+  listCustomers: async (params?: { search?: string; sort_by?: string; filter_dues?: boolean; limit?: number; offset?: number }): Promise<Customer[]> => {
     const q = new URLSearchParams();
     if (params?.search) q.append('search', params.search);
     if (params?.sort_by) q.append('sort_by', params.sort_by);
+    if (params?.filter_dues) q.append('filter_dues', 'true');
     if (params?.limit) q.append('limit', String(params.limit));
     if (params?.offset) q.append('offset', String(params.offset));
     const qs = q.toString();
@@ -557,6 +560,17 @@ export const customerApi = {
     if (offset) q.append('offset', String(offset));
     const qs = q.toString();
     return apiRequest<CustomerHistoryResponse>(`/api/v1/customers/${customerId}/history${qs ? `?${qs}` : ''}`);
+  },
+
+  recordPayment: async (customerId: string, payload: CustomerPaymentCreateRequest): Promise<CustomerPaymentResponse> => {
+    return apiRequest<CustomerPaymentResponse>(`/api/v1/customers/${customerId}/payments`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getCustomerPayments: async (customerId: string): Promise<CustomerPaymentResponse[]> => {
+    return apiRequest<CustomerPaymentResponse[]>(`/api/v1/customers/${customerId}/payments`);
   },
 
   updateCustomer: async (customerId: string, payload: Partial<CustomerCreateRequest>): Promise<Customer> => {

@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/AuthContext';
 import { Product, PaymentMethod, ReceiptResponse, POSTransactionCreate, Customer } from '@/types/api';
-import { inventoryApi, billingApi } from '@/services/api';
+import { inventoryApi, billingApi, customerApi } from '@/services/api';
 import { Palette } from '@/theme/designSystem';
 import { TaxInvoiceModal } from '@/components/TaxInvoiceModal';
 import { POSTerminalSkeleton } from '@/components/ui/Skeleton';
@@ -78,6 +78,8 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [isProcessingCheckout, setIsProcessingCheckout] = useState<boolean>(false);
+  const [saveExcessAsAdvance, setSaveExcessAsAdvance] = useState<boolean>(false);
+  const [useAdvanceBalance, setUseAdvanceBalance] = useState<boolean>(false);
 
   // Tax Invoice Modal State
   const [receiptData, setReceiptData] = useState<ReceiptResponse | null>(null);
@@ -202,10 +204,18 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
         );
         return;
       }
-      if (paymentMethod === 'CREDIT') {
+      const isWalkIn = activeCustomer?.customer_id === 'guest' || customerName.toLowerCase().includes('walk-in');
+      const adv = !isWalkIn ? parseFloat(String(activeCustomer?.advance_balance || 0)) : 0;
+      setUseAdvanceBalance(adv > 0);
+      setSaveExcessAsAdvance(false);
+      if (isWalkIn && paymentMethod === 'CREDIT') {
+        setPaymentMethod('CASH');
+      }
+      if (paymentMethod === 'CREDIT' && !isWalkIn) {
         setReceivedAmount('0');
       } else {
-        setReceivedAmount(calculation.finalTotal.toFixed(2));
+        const netAfterAdv = adv > 0 ? Math.max(0, calculation.finalTotal - adv) : calculation.finalTotal;
+        setReceivedAmount(netAfterAdv.toFixed(2));
       }
       setCheckoutModalVisible(true);
     } catch (err: unknown) {
@@ -233,6 +243,19 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
       }
     }
 
+    const isWalkIn = activeCustomer?.customer_id === 'guest' || customerName.toLowerCase().includes('walk-in');
+    const parsedReceived = paymentMethod === 'CREDIT' ? 0 : (parseFloat(receivedAmount) || 0);
+    const advApplied = (!isWalkIn && useAdvanceBalance) ? Math.min(parseFloat(String(activeCustomer?.advance_balance || 0)), calculation.finalTotal) : 0;
+    const netPayable = Math.max(0, calculation.finalTotal - advApplied);
+
+    if (isWalkIn && (paymentMethod === 'CREDIT' || parsedReceived < netPayable)) {
+      Alert.alert(
+        'Full Payment Required',
+        `Walk-in customers must pay in full. Dues or credit purchases are not allowed. Please collect the remaining ₹${(netPayable - parsedReceived).toFixed(2)}.`
+      );
+      return;
+    }
+
     setIsProcessingCheckout(true);
 
     const posPayload: POSTransactionCreate = {
@@ -254,6 +277,8 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
       customer_name: customerName.trim(),
       customer_phone: trimmedPhone || undefined,
       allow_negative_stock: true,
+      save_excess_as_advance: saveExcessAsAdvance,
+      use_advance_balance: useAdvanceBalance,
     };
 
     try {
@@ -270,12 +295,23 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
       setCartDrawerVisible(false);
       setTaxInvoiceVisible(true);
       void loadProducts(false);
+      void refreshActiveCustomer();
     } catch (err: unknown) {
       showErrorAlert(err, 'Checkout Error', 'Transaction could not be completed. Please check your connection.');
     } finally {
       setIsProcessingCheckout(false);
     }
   };
+
+  const refreshActiveCustomer = useCallback(async () => {
+    if (!activeCustomer || activeCustomer.customer_id === 'guest') return;
+    try {
+      const updated = await customerApi.getCustomer(activeCustomer.customer_id);
+      setActiveCustomer(updated);
+    } catch (err: unknown) {
+      logError('POSTerminalScreen:refreshActiveCustomer', err);
+    }
+  }, [activeCustomer]);
 
   const handleChangeCustomer = () => {
     if (cart.length > 0) {
@@ -565,11 +601,17 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
         customerPhone={customerPhone}
         isProcessingCheckout={isProcessingCheckout}
         isWalkIn={activeCustomer?.customer_id === 'guest' || customerName.toLowerCase().includes('walk-in')}
+        existingDue={parseFloat(String(activeCustomer?.total_due || 0))}
+        existingAdvance={parseFloat(String(activeCustomer?.advance_balance || 0))}
+        saveExcessAsAdvance={saveExcessAsAdvance}
+        useAdvanceBalance={useAdvanceBalance}
         onClose={() => setCheckoutModalVisible(false)}
         onSelectPaymentMethod={setPaymentMethod}
         onChangeReceivedAmount={setReceivedAmount}
         onChangeCustomerName={setCustomerName}
         onChangeCustomerPhone={setCustomerPhone}
+        onToggleSaveExcessAsAdvance={setSaveExcessAsAdvance}
+        onToggleUseAdvanceBalance={setUseAdvanceBalance}
         onConfirmCheckout={handleCheckout}
       />
 
@@ -583,6 +625,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
           setReturnToHistoryOnClose(false);
         }}
         onViewReceipt={handleViewReceiptFromHistory}
+        onCustomerUpdated={refreshActiveCustomer}
       />
 
       {/* Tax Invoice Modal */}

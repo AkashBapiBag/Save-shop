@@ -122,7 +122,7 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flexShrink: 1, maxHeight: 460 }} showsVerticalScrollIndicator={false}>
               {/* 1. Product Name (Editable) */}
               <Input
                 label="Product Name *"
@@ -278,6 +278,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 440,
+    maxHeight: '90%',
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
@@ -372,6 +373,9 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: 'row',
-    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Palette.borderLight,
+    marginTop: 8,
   },
 });

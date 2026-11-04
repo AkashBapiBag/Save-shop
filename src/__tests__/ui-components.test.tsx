@@ -18,6 +18,11 @@ import {
   StoreManagementSkeleton,
   BatchInspectionSkeleton,
   StoreUsersSkeleton,
+  CustomerListSkeleton,
+  CustomerHistorySkeleton,
+  StockTransferSkeleton,
+  TransferHistorySkeleton,
+  AppLoadingSkeleton,
 } from '@/components/ui/Skeleton';
 import { AuthProvider, AuthContext } from '@/context/AuthContext';
 
@@ -404,5 +409,33 @@ describe('components/ui/Skeleton.tsx', () => {
     const { unmount: u2 } = render(<StoreUsersSkeleton count={2} />);
     expect(screen.getByTestId('store-users-skeleton')).toBeDefined();
     u2();
+  });
+
+  it('renders CustomerListSkeleton for customer phone book view', () => {
+    const { unmount } = render(<CustomerListSkeleton itemCount={3} />);
+    expect(screen.getByTestId('customer-list-skeleton')).toBeDefined();
+    unmount();
+  });
+
+  it('renders CustomerHistorySkeleton for customer transaction history modal', () => {
+    const { unmount } = render(<CustomerHistorySkeleton count={2} />);
+    expect(screen.getByTestId('customer-history-skeleton')).toBeDefined();
+    unmount();
+  });
+
+  it('renders StockTransferSkeleton and TransferHistorySkeleton for stock transfers', () => {
+    const { unmount: u1 } = render(<StockTransferSkeleton count={2} />);
+    expect(screen.getByTestId('stock-transfer-skeleton')).toBeDefined();
+    u1();
+
+    const { unmount: u2 } = render(<TransferHistorySkeleton count={2} />);
+    expect(screen.getByTestId('transfer-history-skeleton')).toBeDefined();
+    u2();
+  });
+
+  it('renders AppLoadingSkeleton for root application initialization', () => {
+    const { unmount } = render(<AppLoadingSkeleton />);
+    expect(screen.getByTestId('app-loading-skeleton')).toBeDefined();
+    unmount();
   });
 });

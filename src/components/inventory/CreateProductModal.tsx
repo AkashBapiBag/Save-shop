@@ -126,7 +126,7 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flexShrink: 1, maxHeight: 460 }} showsVerticalScrollIndicator={false}>
               <Input
                 label="Product Name *"
                 placeholder="e.g. Organic Almond Milk"
@@ -247,14 +247,15 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
               </View>
             </ScrollView>
 
-            <Button
-              title="Save Product to Catalog"
-              variant="primary"
-              size="md"
-              loading={isSubmitting}
-              onPress={handleSave}
-              style={{ marginTop: 14 }}
-            />
+            <View style={styles.fixedModalFooter}>
+              <Button
+                title="Save Product to Catalog"
+                variant="primary"
+                size="md"
+                loading={isSubmitting}
+                onPress={handleSave}
+              />
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -286,10 +287,17 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 440,
+    maxHeight: '90%',
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
     ...Shadows.lg,
+  },
+  fixedModalFooter: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Palette.borderLight,
+    marginTop: 6,
   },
   modalHeader: {
     flexDirection: 'row',

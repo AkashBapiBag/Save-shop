@@ -37,27 +37,33 @@ export default function Root({ children }: { children: React.ReactNode }) {
         {/* Critical: Injects react-native-web stylesheets, preload links, and JS bundle scripts */}
         {headNodes}
 
-        {/* Service Worker Management: active in production, cleaned up on localhost dev */}
+        {/* Service Worker and Cache Self-Healing: cleans up stale service workers, cache storage, and obsolete storage keys */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+              if (typeof window !== 'undefined') {
+                if ('serviceWorker' in navigator) {
                   navigator.serviceWorker.getRegistrations().then(function(registrations) {
                     for (var r of registrations) { r.unregister(); }
                   });
-                  if ('caches' in window) {
-                    caches.keys().then(function(names) {
-                      for (var n of names) { caches.delete(n); }
-                    });
-                  }
-                } else {
-                  window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                      console.warn('PWA ServiceWorker registration failed:', err);
-                    });
+                }
+                if ('caches' in window) {
+                  caches.keys().then(function(names) {
+                    for (var n of names) { caches.delete(n); }
                   });
                 }
+                try {
+                  if (window.localStorage) {
+                    var u = window.localStorage.getItem('@saveshop_api_url');
+                    if (u && (u.indexOf('trycloudflare.com') !== -1 || u.indexOf('192.168.29.252') !== -1 || u.indexOf('chamber-golf') !== -1)) {
+                      window.localStorage.removeItem('@saveshop_api_url');
+                    }
+                    var s = window.localStorage.getItem('@saveshop_active_store');
+                    if (s && s.indexOf('9300791a-52eb-49ce-a4cb-5983d34374e0') !== -1) {
+                      window.localStorage.removeItem('@saveshop_active_store');
+                    }
+                  }
+                } catch(e) {}
               }
             `,
           }}

@@ -10,6 +10,7 @@ export interface POSCustomerCardProps {
   isSelected?: boolean;
   onSelect: (customer: Customer) => void;
   onViewHistory: (customer: Customer) => void;
+  onSettleDue?: (customer: Customer) => void;
 }
 
 const AVATAR_COLORS = [
@@ -37,9 +38,12 @@ export const POSCustomerCard: React.FC<POSCustomerCardProps> = ({
   isSelected = false,
   onSelect,
   onViewHistory,
+  onSettleDue,
 }) => {
   const avatarBg = getAvatarColor(customer.name);
   const totalSpentNum = parseFloat(String(customer.total_spent || 0));
+  const dueAmount = parseFloat(String(customer.total_due || 0));
+  const advanceAmount = parseFloat(String(customer.advance_balance || 0));
 
   return (
     <TouchableOpacity
@@ -69,6 +73,18 @@ export const POSCustomerCard: React.FC<POSCustomerCardProps> = ({
             {customer.total_orders === 0 && (
               <View style={styles.newBadge}>
                 <Text style={styles.newBadgeText}>New</Text>
+              </View>
+            )}
+            {dueAmount > 0 && (
+              <View style={styles.dueBadge}>
+                <Ionicons name="alert-circle" size={11} color={Palette.rose} style={{ marginRight: 2 }} />
+                <Text style={styles.dueBadgeText}>₹{dueAmount.toFixed(0)} Due</Text>
+              </View>
+            )}
+            {advanceAmount > 0 && dueAmount <= 0 && (
+              <View style={styles.advanceBadge}>
+                <Ionicons name="wallet-outline" size={11} color={Palette.emerald} style={{ marginRight: 2 }} />
+                <Text style={styles.advanceBadgeText}>₹{advanceAmount.toFixed(0)} Adv</Text>
               </View>
             )}
           </View>
@@ -106,6 +122,21 @@ export const POSCustomerCard: React.FC<POSCustomerCardProps> = ({
 
         {/* Action Controls */}
         <View style={styles.actionsCol}>
+          {dueAmount > 0 && onSettleDue && (
+            <TouchableOpacity
+              style={styles.settleBtn}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onSettleDue(customer);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={`Settle due for ${customer.name}`}
+            >
+              <Ionicons name="card" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+              <Text style={styles.settleBtnText}>Settle</Text>
+            </TouchableOpacity>
+          )}
+
           {/* View Purchase History / Bills Button */}
           {customer.total_orders > 0 && (
             <TouchableOpacity
@@ -117,7 +148,7 @@ export const POSCustomerCard: React.FC<POSCustomerCardProps> = ({
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityLabel={`View bills for ${customer.name}`}
             >
-              <Ionicons name="receipt-outline" size={14} color={Palette.bluePrimary} style={{ marginRight: 5 }} />
+              <Ionicons name="receipt-outline" size={14} color={Palette.bluePrimary} style={{ marginRight: 4 }} />
               <Text style={styles.viewBillsBtnText}>View Bill</Text>
             </TouchableOpacity>
           )}
@@ -155,6 +186,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 3,
+    flexWrap: 'wrap',
+    gap: 4,
   },
   customerName: {
     fontSize: 16,
@@ -167,12 +200,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
-    marginLeft: 6,
   },
   newBadgeText: {
     fontSize: 11,
     fontWeight: '700',
     color: Palette.emerald,
+  },
+  dueBadge: {
+    backgroundColor: Palette.roseLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+  },
+  dueBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Palette.rose,
+  },
+  advanceBadge: {
+    backgroundColor: Palette.emeraldLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  advanceBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Palette.emeraldDark,
   },
   phoneRow: {
     flexDirection: 'row',
@@ -207,49 +269,32 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     gap: 6,
   },
+  settleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Palette.rose,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  settleBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   viewBillsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Palette.blueSoft,
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#BFDBFE',
   },
   viewBillsBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: Palette.bluePrimary,
-  },
-  historyBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: Palette.surfaceMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Palette.borderLight,
-  },
-  selectPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Palette.blueSoft,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 2,
-  },
-  selectPillActive: {
-    backgroundColor: Palette.bluePrimary,
-  },
-  selectPillText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Palette.bluePrimary,
-  },
-  selectPillTextActive: {
-    color: '#FFFFFF',
   },
 });

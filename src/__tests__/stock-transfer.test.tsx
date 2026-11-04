@@ -258,4 +258,12 @@ describe('StockTransferModal Component', () => {
 
     expect(screen.queryByText('Stock Transferred!')).toBeNull();
   });
+
+  it('renders StockTransferSkeleton while products are loading from source store', () => {
+    vi.mocked(inventoryApi.listProducts).mockReturnValue(new Promise(() => {}));
+
+    render(<StockTransferModal visible={true} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('stock-transfer-skeleton')).toBeDefined();
+  });
 });

@@ -7,6 +7,7 @@ import { CustomerHistoryModal } from '@/components/pos/CustomerHistoryModal';
 import { POSActiveCustomerBanner } from '@/components/pos/POSActiveCustomerBanner';
 import { POSCustomerSelectView } from '@/components/pos/POSCustomerSelectView';
 import { POSCheckoutModal } from '@/components/pos/POSCheckoutModal';
+import { SettleDueModal } from '@/components/pos/SettleDueModal';
 import { AuthProvider } from '@/context/AuthContext';
 import { customerApi } from '@/services/api';
 import { Customer, CustomerHistoryResponse } from '@/types/api';
@@ -21,6 +22,8 @@ vi.mock('@/services/api', async (importOriginal) => {
       getCustomer: vi.fn(),
       getCustomerHistory: vi.fn(),
       updateCustomer: vi.fn(),
+      recordPayment: vi.fn(),
+      getCustomerPayments: vi.fn(),
     },
     authApi: {
       login: vi.fn(),
@@ -226,6 +229,21 @@ describe('POS Customer Components & Billing Flow', () => {
   });
 
   describe('CustomerHistoryModal', () => {
+    it('displays CustomerHistorySkeleton while transaction records are loading', () => {
+      vi.mocked(customerApi.getCustomerHistory).mockReturnValue(new Promise(() => {}));
+
+      render(
+        <CustomerHistoryModal
+          visible={true}
+          customer={mockCustomerWithOrders}
+          onClose={() => {}}
+          onViewReceipt={vi.fn()}
+        />
+      );
+
+      expect(screen.getByTestId('customer-history-skeleton')).toBeDefined();
+    });
+
     it('fetches customer history and triggers view invoice PDF', async () => {
       const mockHistory: CustomerHistoryResponse = {
         customer: mockCustomerWithOrders,
@@ -264,7 +282,7 @@ describe('POS Customer Components & Billing Flow', () => {
       expect(screen.getAllByText('₹ 1250.00')[0]).toBeDefined();
       expect(screen.getByText('3 items')).toBeDefined();
 
-      const viewBtn = screen.getByText('Invoice PDF');
+      const viewBtn = screen.getByLabelText(/View bill for invoice INV-00042/i);
       fireEvent.click(viewBtn);
       expect(onReceiptMock).toHaveBeenCalledWith('tx-999');
     });
@@ -329,6 +347,21 @@ describe('POS Customer Components & Billing Flow', () => {
   });
 
   describe('POSCustomerSelectView', () => {
+    it('displays CustomerListSkeleton while customers phone book is loading', () => {
+      vi.mocked(customerApi.listCustomers).mockReturnValue(new Promise(() => {}));
+
+      render(
+        <AuthProvider>
+          <POSCustomerSelectView
+            onSelectCustomer={() => {}}
+            onViewCustomerHistory={() => {}}
+          />
+        </AuthProvider>
+      );
+
+      expect(screen.getByTestId('customer-list-skeleton')).toBeDefined();
+    });
+
     it('always renders walk-in customer at the top with optional mobile number', async () => {
       vi.mocked(customerApi.listCustomers).mockResolvedValue([mockCustomerWithOrders, mockNewCustomer]);
       const onSelectMock = vi.fn();
@@ -430,6 +463,253 @@ describe('POS Customer Components & Billing Flow', () => {
       // Redundant inputs should NOT be shown
       expect(screen.queryByPlaceholderText('Customer Name *')).toBeNull();
       expect(screen.queryByPlaceholderText('Contact Mobile Number (Optional)')).toBeNull();
+    });
+
+    it('shows excess amount handling options when received is greater than total', () => {
+      const onToggleExcessMock = vi.fn();
+
+      render(
+        <POSCheckoutModal
+          visible={true}
+          finalTotal={200}
+          paymentMethod="CASH"
+          receivedAmount="250"
+          customerName="Sourav Ganguly"
+          customerPhone="9830012345"
+          isProcessingCheckout={false}
+          saveExcessAsAdvance={false}
+          onToggleSaveExcessAsAdvance={onToggleExcessMock}
+          onClose={() => {}}
+          onSelectPaymentMethod={() => {}}
+          onChangeReceivedAmount={() => {}}
+          onChangeCustomerName={() => {}}
+          onChangeCustomerPhone={() => {}}
+          onConfirmCheckout={() => {}}
+        />
+      );
+
+      // Excess banner and options
+      expect(screen.getByText(/Excess Amount:/i)).toBeDefined();
+      expect(screen.getByText(/Return Change \(₹50\.00\)/i)).toBeDefined();
+      expect(screen.getByText(/Save as Advance Credit \(\+₹50\.00\)/i)).toBeDefined();
+
+      // Click to toggle save excess as advance
+      const advanceOption = screen.getByText(/Save as Advance Credit/i);
+      fireEvent.click(advanceOption);
+      expect(onToggleExcessMock).toHaveBeenCalledWith(true);
+    });
+
+    it('displays advance credit notice and allows applying advance credit', () => {
+      const onToggleAdvMock = vi.fn();
+
+      render(
+        <POSCheckoutModal
+          visible={true}
+          finalTotal={300}
+          paymentMethod="CASH"
+          receivedAmount="200"
+          customerName="Sourav Ganguly"
+          customerPhone="9830012345"
+          existingAdvance={100}
+          useAdvanceBalance={false}
+          onToggleUseAdvanceBalance={onToggleAdvMock}
+          isProcessingCheckout={false}
+          onClose={() => {}}
+          onSelectPaymentMethod={() => {}}
+          onChangeReceivedAmount={() => {}}
+          onChangeCustomerName={() => {}}
+          onChangeCustomerPhone={() => {}}
+          onConfirmCheckout={() => {}}
+        />
+      );
+
+      expect(screen.getByText('Customer Advance Available')).toBeDefined();
+      expect(screen.getByText(/₹100\.00 store credit/i)).toBeDefined();
+
+      const useCreditBtn = screen.getByText('Use Credit');
+      fireEvent.click(useCreditBtn);
+      expect(onToggleAdvMock).toHaveBeenCalledWith(true);
+    });
+
+    it('enforces full payment for walk-in customer: hides CREDIT, blocks checkout on shortfall, and displays change on excess', () => {
+      const onSelectMethodMock = vi.fn();
+      const onConfirmMock = vi.fn();
+
+      const { rerender } = render(
+        <POSCheckoutModal
+          visible={true}
+          finalTotal={200}
+          paymentMethod="CREDIT"
+          receivedAmount="150"
+          customerName="Walk-in Customer"
+          customerPhone=""
+          isWalkIn={true}
+          isProcessingCheckout={false}
+          onClose={() => {}}
+          onSelectPaymentMethod={onSelectMethodMock}
+          onChangeReceivedAmount={() => {}}
+          onChangeCustomerName={() => {}}
+          onChangeCustomerPhone={() => {}}
+          onConfirmCheckout={onConfirmMock}
+        />
+      );
+
+      // CREDIT should not be rendered in payment methods for walk-ins
+      expect(screen.queryByText('CREDIT')).toBeNull();
+      // Should have auto-switched to CASH
+      expect(onSelectMethodMock).toHaveBeenCalledWith('CASH');
+
+      // Shortfall warning is displayed
+      expect(screen.getByText(/Walk-in customers must pay in full/i)).toBeDefined();
+      expect(screen.getByText(/Shortfall \(Unpaid\):/i)).toBeDefined();
+
+      // Button title shows shortfall
+      const btn = screen.getByText(/Pay in Full \(Shortfall ₹50\.00\)/i);
+      expect(btn).toBeDefined();
+
+      // Now rerender with full payment
+      rerender(
+        <POSCheckoutModal
+          visible={true}
+          finalTotal={200}
+          paymentMethod="CASH"
+          receivedAmount="200"
+          customerName="Walk-in Customer"
+          customerPhone=""
+          isWalkIn={true}
+          isProcessingCheckout={false}
+          onClose={() => {}}
+          onSelectPaymentMethod={onSelectMethodMock}
+          onChangeReceivedAmount={() => {}}
+          onChangeCustomerName={() => {}}
+          onChangeCustomerPhone={() => {}}
+          onConfirmCheckout={onConfirmMock}
+        />
+      );
+
+      expect(screen.getByText('Generate Bill & Receipt')).toBeDefined();
+      expect(screen.queryByText(/Walk-in customers must pay in full/i)).toBeNull();
+
+      // Now rerender with excess payment
+      rerender(
+        <POSCheckoutModal
+          visible={true}
+          finalTotal={200}
+          paymentMethod="CASH"
+          receivedAmount="250"
+          customerName="Walk-in Customer"
+          customerPhone=""
+          isWalkIn={true}
+          isProcessingCheckout={false}
+          onClose={() => {}}
+          onSelectPaymentMethod={onSelectMethodMock}
+          onChangeReceivedAmount={() => {}}
+          onChangeCustomerName={() => {}}
+          onChangeCustomerPhone={() => {}}
+          onConfirmCheckout={onConfirmMock}
+        />
+      );
+
+      // Walk-in should see Change to Return, NOT Save as Advance Credit
+      expect(screen.getByText(/Change to Return:/i)).toBeDefined();
+      expect(screen.queryByText(/Save as Advance Credit/i)).toBeNull();
+    });
+  });
+
+  describe('Customer Dues & SettleDueModal Flow', () => {
+    it('renders Due badge on POSCustomerCard and triggers onSettleDue', () => {
+      const onSelectMock = vi.fn();
+      const onViewHistoryMock = vi.fn();
+      const onSettleDueMock = vi.fn();
+
+      const customerWithDue: Customer = {
+        ...mockCustomerWithOrders,
+        total_due: 450,
+      };
+
+      render(
+        <POSCustomerCard
+          customer={customerWithDue}
+          onSelect={onSelectMock}
+          onViewHistory={onViewHistoryMock}
+          onSettleDue={onSettleDueMock}
+        />
+      );
+
+      expect(screen.getByText('₹450 Due')).toBeDefined();
+
+      const settleBtn = screen.getByText('Settle');
+      expect(settleBtn).toBeDefined();
+      fireEvent.click(settleBtn);
+      expect(onSettleDueMock).toHaveBeenCalledWith(customerWithDue);
+    });
+
+    it('renders Advance badge on POSCustomerCard when customer has advance balance', () => {
+      const customerWithAdvance: Customer = {
+        ...mockCustomerWithOrders,
+        total_due: 0,
+        advance_balance: 150,
+      };
+
+      render(
+        <POSCustomerCard
+          customer={customerWithAdvance}
+          onSelect={() => {}}
+          onViewHistory={() => {}}
+        />
+      );
+
+      expect(screen.getByText('₹150 Adv')).toBeDefined();
+    });
+
+    it('SettleDueModal allows settling customer due with quick amount and recording payment', async () => {
+      const onCloseMock = vi.fn();
+      const onSuccessMock = vi.fn();
+
+      const customerWithDue: Customer = {
+        ...mockCustomerWithOrders,
+        total_due: 350,
+      };
+
+      vi.mocked(customerApi.recordPayment).mockResolvedValue({
+        payment_id: 'pay-1',
+        store_id: 'store-1',
+        customer_id: 'cust-101',
+        payment_number: 'PAY-0001',
+        amount: 350,
+        payment_method: 'UPI',
+        notes: 'GPay ref',
+        created_at: '2026-11-05T00:00:00Z',
+      });
+
+      render(
+        <SettleDueModal
+          visible={true}
+          customer={customerWithDue}
+          onClose={onCloseMock}
+          onPaymentSuccess={onSuccessMock}
+        />
+      );
+
+      expect(screen.getByText('Settle Due')).toBeDefined();
+      expect(screen.getByText('Outstanding Due Balance')).toBeDefined();
+      expect(screen.getAllByText('₹ 350.00').length).toBeGreaterThan(0);
+      expect(screen.getByText(/Full Due/i)).toBeDefined();
+
+      const recordBtn = screen.getByText('Record Payment & Settle');
+      await act(async () => {
+        fireEvent.click(recordBtn);
+      });
+
+      expect(customerApi.recordPayment).toHaveBeenCalledWith(
+        'cust-101',
+        expect.objectContaining({
+          amount: 350,
+          payment_method: 'UPI',
+        })
+      );
+      expect(onSuccessMock).toHaveBeenCalledTimes(1);
+      expect(onCloseMock).toHaveBeenCalledTimes(1);
     });
   });
 });

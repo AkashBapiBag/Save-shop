@@ -455,13 +455,15 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
               </View>
             </View>
           </View>
+        </ScrollView>
 
-          {/* Action Buttons */}
-          <View
-            style={styles.actionButtonsContainer}
-            className="no-print"
-            {...({ 'data-no-print': 'true' } as any)}
-          >
+        {/* Pinned Bottom Control Bar */}
+        <View
+          style={styles.fixedBottomBar}
+          className="no-print"
+          {...({ 'data-no-print': 'true' } as any)}
+        >
+          <View style={styles.actionButtonsContainer}>
             <TouchableOpacity
               onPress={handlePrint}
               style={[styles.primaryButton, { flex: 1, marginRight: 8 }]}
@@ -496,12 +498,10 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
           <TouchableOpacity
             onPress={onClose}
             style={styles.doneButton}
-            className="no-print"
-            {...({ 'data-no-print': 'true' } as any)}
           >
             <Text style={styles.doneButtonText}>Done / New Sale</Text>
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -908,10 +908,19 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
 
-  // Action Buttons
+  // Pinned Bottom Bar & Action Buttons
+  fixedBottomBar: {
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: Palette.borderLight,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 14,
+    ...Shadows.md,
+  },
   actionButtonsContainer: {
     flexDirection: 'row',
-    marginTop: 16,
+    marginTop: 0,
     maxWidth: 794,
     alignSelf: 'center',
     width: '100%',

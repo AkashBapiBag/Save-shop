@@ -286,9 +286,32 @@ export interface Customer {
   updated_at: string;
   total_orders: number;
   total_spent: number | string;
+  total_due?: number | string;
+  advance_balance?: number | string;
+  net_balance?: number | string;
   last_order_date?: string | null;
   is_multi_store?: boolean;
   store_ids?: string[];
+}
+
+export interface CustomerPaymentCreateRequest {
+  amount: number | string;
+  payment_method: string;
+  notes?: string | null;
+  transaction_id?: string | null;
+}
+
+export interface CustomerPaymentResponse {
+  payment_id: string;
+  store_id: string;
+  customer_id: string;
+  cashier_id?: string | null;
+  cashier_name?: string | null;
+  payment_number: string;
+  amount: number | string;
+  payment_method: string;
+  notes?: string | null;
+  created_at: string;
 }
 
 export interface CustomerCreateRequest {
@@ -317,8 +340,12 @@ export interface CustomerTransactionHistoryItem {
 export interface CustomerHistoryResponse {
   customer: Customer;
   transactions: CustomerTransactionHistoryItem[];
+  payments?: CustomerPaymentResponse[];
   total_orders: number;
   total_spent: number | string;
+  total_due?: number | string;
+  advance_balance?: number | string;
+  net_balance?: number | string;
   all_stores_orders?: number | null;
   all_stores_spent?: number | string | null;
 }
@@ -339,6 +366,8 @@ export interface POSTransactionCreate {
   notes?: string;
   client_offline_id?: string;
   allow_negative_stock?: boolean;
+  save_excess_as_advance?: boolean;
+  use_advance_balance?: boolean;
 }
 
 export interface BatchAllocation {

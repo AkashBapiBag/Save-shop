@@ -519,6 +519,205 @@ export const StoreUsersSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) 
   );
 };
 
+/**
+ * Skeleton loader for Customer Phone Book / Directory in POS screen.
+ * Previews quick walk-in customer card and customer row items.
+ */
+export const CustomerListSkeleton: React.FC<{ itemCount?: number }> = ({ itemCount = 5 }) => {
+  return (
+    <View style={styles.pageContainer} testID="customer-list-skeleton">
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Walk-in Customer Quick Card Skeleton */}
+        <View style={styles.customerWalkInCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 }}>
+            <Skeleton width={42} height={42} borderRadius={21} style={{ marginRight: 12 }} />
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <Skeleton width="45%" height={16} borderRadius={4} style={{ marginRight: 8 }} />
+                <Skeleton width={60} height={18} borderRadius={9} />
+              </View>
+              <Skeleton width="70%" height={12} borderRadius={4} />
+            </View>
+          </View>
+          <Skeleton width={60} height={28} borderRadius={14} />
+        </View>
+
+        {/* Section Header Strip Skeleton */}
+        <View style={[styles.rowBetween, { marginVertical: 12, paddingHorizontal: 2 }]}>
+          <Skeleton width={130} height={14} borderRadius={4} />
+          <Skeleton width={50} height={12} borderRadius={4} />
+        </View>
+
+        {/* Customer Directory Row Cards */}
+        {Array.from({ length: itemCount }).map((_, idx) => (
+          <View key={idx} style={styles.customerRowCard}>
+            <Skeleton width={42} height={42} borderRadius={21} style={{ marginRight: 12 }} />
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <Skeleton width="50%" height={15} borderRadius={4} style={{ marginRight: 8 }} />
+                {idx % 2 === 0 && <Skeleton width={50} height={16} borderRadius={6} />}
+              </View>
+              <Skeleton width="40%" height={12} borderRadius={4} style={{ marginBottom: 4 }} />
+              <Skeleton width="30%" height={11} borderRadius={3} />
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Skeleton width={64} height={28} borderRadius={8} />
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+};
+
+/**
+ * Skeleton loader for Customer History Modal (Bills & Settlements history tabs).
+ */
+export const CustomerHistorySkeleton: React.FC<{ count?: number }> = ({ count = 4 }) => {
+  return (
+    <View style={{ paddingVertical: 8 }} testID="customer-history-skeleton">
+      {Array.from({ length: count }).map((_, idx) => (
+        <View key={idx} style={styles.customerHistoryCard}>
+          {/* Top Row: Invoice / Payment ID + Date */}
+          <View style={[styles.rowBetween, { marginBottom: 10 }]}>
+            <Skeleton width={110} height={18} borderRadius={6} />
+            <Skeleton width={85} height={12} borderRadius={4} />
+          </View>
+          {/* Middle Row: Amount / Balance */}
+          <View style={[styles.rowBetween, { marginBottom: 10 }]}>
+            <Skeleton width={90} height={20} borderRadius={4} />
+            <Skeleton width={65} height={18} borderRadius={9} />
+          </View>
+          <View style={styles.cardDivider} />
+          {/* Bottom Row: Badges + Action */}
+          <View style={[styles.rowBetween, { marginTop: 10 }]}>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <Skeleton width={55} height={18} borderRadius={9} />
+              <Skeleton width={50} height={18} borderRadius={9} />
+            </View>
+            <Skeleton width={75} height={26} borderRadius={6} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+/**
+ * Skeleton loader for Stock Transfer items / products selection.
+ */
+export const StockTransferSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => {
+  return (
+    <View style={{ paddingVertical: 8 }} testID="stock-transfer-skeleton">
+      {Array.from({ length: count }).map((_, idx) => (
+        <View key={idx} style={styles.stockTransferCard}>
+          <View style={[styles.rowBetween, { marginBottom: 8 }]}>
+            <Skeleton width="55%" height={15} borderRadius={4} />
+            <Skeleton width={60} height={18} borderRadius={9} />
+          </View>
+          <View style={[styles.rowBetween, { marginTop: 6 }]}>
+            <Skeleton width="35%" height={12} borderRadius={4} />
+            <Skeleton width={80} height={30} borderRadius={8} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+/**
+ * Skeleton loader for Stock Transfer History records.
+ */
+export const TransferHistorySkeleton: React.FC<{ count?: number }> = ({ count = 3 }) => {
+  return (
+    <View style={{ paddingVertical: 8 }} testID="transfer-history-skeleton">
+      {Array.from({ length: count }).map((_, idx) => (
+        <View key={idx} style={styles.transferHistoryCard}>
+          {/* Header: Transfer number + Date */}
+          <View style={[styles.rowBetween, { marginBottom: 10 }]}>
+            <Skeleton width={110} height={16} borderRadius={4} />
+            <Skeleton width={80} height={12} borderRadius={4} />
+          </View>
+          {/* Direction Perspective Badge */}
+          <Skeleton width="65%" height={22} borderRadius={11} style={{ marginBottom: 12 }} />
+          {/* Transferred items list */}
+          <View style={{ gap: 6, paddingTop: 4 }}>
+            <View style={styles.rowBetween}>
+              <Skeleton width="50%" height={13} borderRadius={3} />
+              <Skeleton width={45} height={13} borderRadius={3} />
+            </View>
+            <View style={styles.rowBetween}>
+              <Skeleton width="40%" height={13} borderRadius={3} />
+              <Skeleton width={40} height={13} borderRadius={3} />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+/**
+ * Full-app loading skeleton for initial app launch and auth hydration.
+ * Replaces full-screen circular spinners with a polished UI skeleton preview.
+ */
+export const AppLoadingSkeleton: React.FC = () => {
+  return (
+    <View style={styles.pageContainer} testID="app-loading-skeleton">
+      {/* App Header Bar Skeleton */}
+      <View style={styles.appHeaderSkeleton}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Skeleton width={38} height={38} borderRadius={10} style={{ marginRight: 10 }} />
+          <View>
+            <Skeleton width={120} height={18} borderRadius={4} style={{ marginBottom: 4 }} />
+            <Skeleton width={80} height={11} borderRadius={3} />
+          </View>
+        </View>
+        <Skeleton width={36} height={36} borderRadius={18} />
+      </View>
+
+      {/* Top Navigation Tabs Strip */}
+      <View style={styles.appTabsSkeleton}>
+        {['Billing POS', 'Inventory', 'Sales', 'Dashboard'].map((_, idx) => (
+          <Skeleton key={idx} width="22%" height={32} borderRadius={8} />
+        ))}
+      </View>
+
+      {/* Main Content Skeleton Area */}
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* KPI strip */}
+        <View style={styles.kpiGrid}>
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <View key={idx} style={styles.kpiCard}>
+              <Skeleton width={32} height={32} borderRadius={8} style={{ marginBottom: 8 }} />
+              <Skeleton width="50%" height={11} borderRadius={3} style={{ marginBottom: 6 }} />
+              <Skeleton width="70%" height={18} borderRadius={4} />
+            </View>
+          ))}
+        </View>
+
+        {/* Section Cards */}
+        {Array.from({ length: 3 }).map((_, idx) => (
+          <View key={idx} style={styles.sectionCard}>
+            <View style={[styles.rowBetween, { marginBottom: 12 }]}>
+              <Skeleton width="45%" height={16} borderRadius={4} />
+              <Skeleton width={60} height={12} borderRadius={4} />
+            </View>
+            <Skeleton width="85%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+            <Skeleton width="60%" height={12} borderRadius={4} />
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+};
+
 // -------------------------------------------------------------
 // Styles
 // -------------------------------------------------------------
@@ -668,5 +867,82 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: Palette.borderLight,
+  },
+
+  // Customer Phone Book / List
+  customerWalkInCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderColor: Palette.borderLight,
+    ...Shadows.sm,
+  },
+  customerRowCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+    ...Shadows.sm,
+  },
+
+  // Customer History
+  customerHistoryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+    ...Shadows.sm,
+  },
+
+  // Stock Transfer
+  stockTransferCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+    ...Shadows.sm,
+  },
+  transferHistoryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+    ...Shadows.sm,
+  },
+
+  // App Root Loading
+  appHeaderSkeleton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: Palette.borderLight,
+  },
+  appTabsSkeleton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: Palette.borderLight,
   },
 });

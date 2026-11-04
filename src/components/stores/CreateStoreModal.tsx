@@ -130,7 +130,7 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({
           </View>
 
           <ScrollView
-            style={{ maxHeight: 480 }}
+            style={{ flexShrink: 1, maxHeight: 480 }}
             contentContainerStyle={{ paddingBottom: 16 }}
             showsVerticalScrollIndicator={false}
           >
@@ -301,14 +301,15 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({
             </View>
           </ScrollView>
 
-          <Button
-            title="Create & Register Store"
-            variant="primary"
-            size="md"
-            loading={isCreating}
-            onPress={handleSave}
-            style={{ marginTop: 14 }}
-          />
+          <View style={styles.fixedModalFooter}>
+            <Button
+              title="Create & Register Store"
+              variant="primary"
+              size="md"
+              loading={isCreating}
+              onPress={handleSave}
+            />
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -326,10 +327,17 @@ const styles = StyleSheet.create({
   modalCardLarge: {
     width: '100%',
     maxWidth: 480,
+    maxHeight: '90%',
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 20,
     ...Shadows.lg,
+  },
+  fixedModalFooter: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Palette.borderLight,
+    marginTop: 4,
   },
   modalHeader: {
     flexDirection: 'row',

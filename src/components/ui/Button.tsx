@@ -57,7 +57,7 @@ export const Button: React.FC<ButtonProps> = ({
       case 'primary':
       default:
         return {
-          btn: { backgroundColor: Palette.navyPrimary },
+          btn: { backgroundColor: Palette.bluePrimary },
           txt: { color: Palette.textLight },
         };
     }
@@ -120,6 +120,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 44,
   },
   text: {
     textAlign: 'center',

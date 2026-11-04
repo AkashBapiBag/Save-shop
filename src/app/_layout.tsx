@@ -11,6 +11,7 @@ import { OfflineScreen } from '@/components/ui/OfflineScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { LoginScreen } from '@/screens/LoginScreen';
 import { MainNavigator } from '@/components/MainNavigator';
+import { AppLoadingSkeleton } from '@/components/ui/Skeleton';
 import { Palette } from '@/theme/designSystem';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -142,11 +143,7 @@ function RootContent() {
   }
 
   if (isLoading) {
-    return (
-      <View style={styles.splashLoading}>
-        <ActivityIndicator size="large" color={Palette.navyPrimary} />
-      </View>
-    );
+    return <AppLoadingSkeleton />;
   }
 
   return (

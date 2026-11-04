@@ -290,12 +290,13 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
             <View style={styles.modalBodyContainer}>
               {/* MODE 1: SINGLE PRODUCT INWARD */}
               {receiveMode === 'single' && (
-                <ScrollView
-                  style={{ flex: 1 }}
-                  contentContainerStyle={{ paddingBottom: 16 }}
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                >
+                <View style={{ flex: 1 }}>
+                  <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ paddingBottom: 16 }}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                  >
                   <ProductSelectTrigger
                     label="Product *"
                     product={singleSelectedProduct}
@@ -403,7 +404,9 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
                       <Ionicons name="chevron-forward" size={18} color={Palette.textSecondary} />
                     </TouchableOpacity>
                   </View>
+                </ScrollView>
 
+                <View style={styles.fixedActionFooter}>
                   <Button
                     title="Confirm Single Stock Inward"
                     variant="primary"
@@ -411,8 +414,9 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
                     loading={isSubmittingSingle}
                     onPress={handleSingleSubmit}
                   />
-                </ScrollView>
-              )}
+                </View>
+              </View>
+            )}
 
               {/* MODE 2: BULK DELIVERY SHIPMENT (MANIFEST VIEW) */}
               {isBulkManifestVisible && (
@@ -554,12 +558,13 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
 
               {/* MODE 2: BULK DELIVERY SHIPMENT (ADD PRODUCT VIEW) */}
               {isBulkAddVisible && (
-                <ScrollView
-                  style={{ flex: 1 }}
-                  contentContainerStyle={{ paddingBottom: 16 }}
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                >
+                <View style={{ flex: 1 }}>
+                  <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ paddingBottom: 16 }}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                  >
                   {consignmentItems.length > 0 && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                       <TouchableOpacity
@@ -662,25 +667,26 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
                       <Ionicons name="chevron-forward" size={18} color={Palette.textSecondary} />
                     </TouchableOpacity>
                   </View>
-
-                  <View style={{ gap: 8 }}>
-                    <Button
-                      title="+ Add to Delivery Manifest"
-                      variant="primary"
-                      size="md"
-                      onPress={handleAddConsignmentItem}
-                    />
-                    {consignmentItems.length > 0 && (
-                      <Button
-                        title="Cancel"
-                        variant="secondary"
-                        size="sm"
-                        onPress={() => setIsAddingConsignmentItem(false)}
-                      />
-                    )}
-                  </View>
                 </ScrollView>
-              )}
+
+                <View style={[styles.fixedActionFooter, { gap: 8 }]}>
+                  <Button
+                    title="+ Add to Delivery Manifest"
+                    variant="primary"
+                    size="md"
+                    onPress={handleAddConsignmentItem}
+                  />
+                  {consignmentItems.length > 0 && (
+                    <Button
+                      title="Cancel"
+                      variant="secondary"
+                      size="sm"
+                      onPress={() => setIsAddingConsignmentItem(false)}
+                    />
+                  )}
+                </View>
+              </View>
+            )}
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -1013,6 +1019,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: Palette.borderLight,
+  },
+  fixedActionFooter: {
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Palette.borderLight,
+    backgroundColor: '#FFFFFF',
   },
   consignmentSummaryBar: {
     flexDirection: 'row',

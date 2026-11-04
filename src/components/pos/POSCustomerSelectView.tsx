@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +13,8 @@ import { Customer } from '@/types/api';
 import { customerApi } from '@/services/api';
 import { Palette, Shadows } from '@/theme/designSystem';
 import { POSCustomerCard } from '@/components/pos/POSCustomerCard';
+import { SettleDueModal } from '@/components/pos/SettleDueModal';
+import { CustomerListSkeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { logError } from '@/utils/errorHandler';
 
@@ -23,7 +24,7 @@ export interface POSCustomerSelectViewProps {
   onNavigateToSales?: () => void;
 }
 
-type SortCriteria = 'recent' | 'name' | 'spent' | 'orders';
+type SortCriteria = 'recent' | 'dues' | 'name' | 'spent' | 'orders';
 
 export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
   onSelectCustomer,
@@ -36,6 +37,7 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
   const [sortBy, setSortBy] = useState<SortCriteria>('recent');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [settleCustomer, setSettleCustomer] = useState<Customer | null>(null);
 
   const loadCustomers = useCallback(async (isPullRefresh = false) => {
     if (isPullRefresh) {
@@ -48,6 +50,7 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
       const data = await customerApi.listCustomers({
         search: searchQuery.trim() || undefined,
         sort_by: sortBy,
+        filter_dues: sortBy === 'dues' ? true : undefined,
       });
       setCustomers(data);
     } catch (err: unknown) {
@@ -90,10 +93,19 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
 
   const sortChips: { key: SortCriteria; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { key: 'recent', label: 'Recent', icon: 'time-outline' },
+    { key: 'dues', label: 'With Dues', icon: 'alert-circle-outline' },
     { key: 'name', label: 'A-Z', icon: 'text-outline' },
     { key: 'spent', label: 'Top Spent', icon: 'cash-outline' },
     { key: 'orders', label: 'Most Orders', icon: 'ribbon-outline' },
   ];
+
+  const customersWithDuesCount = customers.filter(
+    (c) => parseFloat(String(c.total_due || 0)) > 0
+  ).length;
+  const totalDuesInStore = customers.reduce(
+    (sum, c) => sum + Math.max(0, parseFloat(String(c.total_due || 0))),
+    0
+  );
 
   return (
     <View style={styles.container}>
@@ -180,10 +192,7 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
 
       {/* Customer List / States */}
       {isLoading && !isRefreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Palette.bluePrimary} />
-          <Text style={styles.loadingLabel}>Loading Customer Phone Book...</Text>
-        </View>
+        <CustomerListSkeleton itemCount={5} />
       ) : (
         <FlatList
           data={customers}
@@ -231,6 +240,26 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
                 </View>
               </TouchableOpacity>
 
+              {/* Outstanding Dues Notice Banner */}
+              {totalDuesInStore > 0 && sortBy !== 'dues' && (
+                <TouchableOpacity
+                  style={styles.duesNoticeBanner}
+                  onPress={() => setSortBy('dues')}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.duesNoticeLeft}>
+                    <Ionicons name="alert-circle" size={20} color={Palette.rose} />
+                    <View style={{ marginLeft: 8 }}>
+                      <Text style={styles.duesNoticeTitle}>Store Dues: ₹{totalDuesInStore.toFixed(2)}</Text>
+                      <Text style={styles.duesNoticeSubtitle}>
+                        {customersWithDuesCount} {customersWithDuesCount === 1 ? 'customer has' : 'customers have'} pending due. Tap to view.
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={Palette.rose} />
+                </TouchableOpacity>
+              )}
+
               {/* Subheader separator for registered phone book customers */}
               <View style={styles.registeredDividerRow}>
                 <Text style={styles.registeredSectionLabel}>
@@ -274,10 +303,21 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
               customer={item}
               onSelect={onSelectCustomer}
               onViewHistory={onViewCustomerHistory}
+              onSettleDue={(c) => setSettleCustomer(c)}
             />
           )}
         />
       )}
+
+      {/* Settle Due Modal */}
+      <SettleDueModal
+        visible={!!settleCustomer}
+        customer={settleCustomer}
+        onClose={() => setSettleCustomer(null)}
+        onPaymentSuccess={() => {
+          void loadCustomers(false);
+        }}
+      />
     </View>
   );
 };
@@ -510,6 +550,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  duesNoticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Palette.roseLight,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+    marginBottom: 12,
+  },
+  duesNoticeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  duesNoticeTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Palette.rose,
+  },
+  duesNoticeSubtitle: {
+    fontSize: 11,
+    color: Palette.textSecondary,
+    marginTop: 1,
   },
   registeredDividerRow: {
     flexDirection: 'row',

@@ -25,15 +25,21 @@ export interface POSCheckoutModalProps {
   isProcessingCheckout: boolean;
   cart?: CartItem[];
   isWalkIn?: boolean;
+  existingDue?: number;
+  existingAdvance?: number;
+  saveExcessAsAdvance?: boolean;
+  useAdvanceBalance?: boolean;
   onClose: () => void;
   onSelectPaymentMethod: (method: PaymentMethod) => void;
   onChangeReceivedAmount: (amount: string) => void;
   onChangeCustomerName: (name: string) => void;
   onChangeCustomerPhone: (phone: string) => void;
+  onToggleSaveExcessAsAdvance?: (val: boolean) => void;
+  onToggleUseAdvanceBalance?: (val: boolean) => void;
   onConfirmCheckout: () => void;
 }
 
-const PAYMENT_METHODS: PaymentMethod[] = ['CASH', 'UPI', 'CARD', 'CREDIT'];
+const ALL_PAYMENT_METHODS: PaymentMethod[] = ['CASH', 'UPI', 'CARD', 'CREDIT'];
 
 export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
   visible,
@@ -45,19 +51,44 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
   isProcessingCheckout,
   cart,
   isWalkIn: propIsWalkIn,
+  existingDue = 0,
+  existingAdvance = 0,
+  saveExcessAsAdvance = false,
+  useAdvanceBalance = false,
   onClose,
   onSelectPaymentMethod,
   onChangeReceivedAmount,
   onChangeCustomerName,
   onChangeCustomerPhone,
+  onToggleSaveExcessAsAdvance,
+  onToggleUseAdvanceBalance,
   onConfirmCheckout,
 }) => {
-  const parsedReceived = parseFloat(receivedAmount) || 0;
-  const isCredit = paymentMethod === 'CREDIT';
   const isWalkIn =
     propIsWalkIn !== undefined
       ? propIsWalkIn
       : customerName.toLowerCase().includes('walk-in');
+
+  const availablePaymentMethods = isWalkIn
+    ? ALL_PAYMENT_METHODS.filter((m) => m !== 'CREDIT')
+    : ALL_PAYMENT_METHODS;
+
+  React.useEffect(() => {
+    if (isWalkIn && paymentMethod === 'CREDIT') {
+      onSelectPaymentMethod('CASH');
+    }
+  }, [isWalkIn, paymentMethod, onSelectPaymentMethod]);
+
+  const parsedReceived = parseFloat(receivedAmount) || 0;
+  const isCredit = paymentMethod === 'CREDIT';
+
+  const advanceApplied = !isWalkIn && useAdvanceBalance ? Math.min(existingAdvance, finalTotal) : 0;
+  const netPayable = Math.max(0, finalTotal - advanceApplied);
+  const balanceDue = isCredit ? netPayable : Math.max(0, netPayable - parsedReceived);
+  const excess = !isCredit && parsedReceived > netPayable ? parsedReceived - netPayable : 0;
+
+  const isWalkInShortfall = isWalkIn && parsedReceived < netPayable;
+  const isDueMissingPhone = !isWalkIn && balanceDue > 0 && !customerPhone.trim();
 
   return (
     <Modal
@@ -81,12 +112,57 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
 
             <ScrollView
               showsVerticalScrollIndicator={false}
+              style={{ flexGrow: 1, flexShrink: 1 }}
               contentContainerStyle={{ paddingBottom: 8 }}
             >
               <View style={styles.checkoutAmountBanner}>
-                <Text style={styles.checkoutAmountLabel}>Amount Payable:</Text>
-                <Text style={styles.checkoutAmountValue}>₹ {finalTotal.toFixed(2)}</Text>
+                <View>
+                  <Text style={styles.checkoutAmountLabel}>Amount Payable:</Text>
+                  {useAdvanceBalance && advanceApplied > 0 && (
+                    <Text style={styles.advanceDeductedNote}>
+                      (₹{finalTotal.toFixed(2)} - ₹{advanceApplied.toFixed(2)} Advance Credit)
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.checkoutAmountValue}>₹ {netPayable.toFixed(2)}</Text>
               </View>
+
+              {/* Outstanding Due Notice if customer has prior dues */}
+              {!isWalkIn && existingDue > 0 && (
+                <View style={styles.existingDueNotice}>
+                  <Ionicons name="alert-circle" size={16} color={Palette.rose} />
+                  <Text style={styles.existingDueNoticeText}>
+                    Note: Customer owes ₹{existingDue.toFixed(2)} from previous visits.
+                  </Text>
+                </View>
+              )}
+
+              {/* Advance Balance Available Notice */}
+              {!isWalkIn && existingAdvance > 0 && (
+                <View style={styles.advanceCreditNotice}>
+                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="wallet-outline" size={18} color={Palette.emerald} />
+                    <View style={{ marginLeft: 8 }}>
+                      <Text style={styles.advanceCreditTitle}>Customer Advance Available</Text>
+                      <Text style={styles.advanceCreditSubtitle}>₹{existingAdvance.toFixed(2)} store credit</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.useAdvanceBtn, useAdvanceBalance && styles.useAdvanceBtnActive]}
+                    onPress={() => onToggleUseAdvanceBalance?.(!useAdvanceBalance)}
+                  >
+                    <Ionicons
+                      name={useAdvanceBalance ? 'checkmark-circle' : 'add-circle-outline'}
+                      size={14}
+                      color={useAdvanceBalance ? '#FFFFFF' : Palette.emeraldDark}
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text style={[styles.useAdvanceBtnText, useAdvanceBalance && styles.useAdvanceBtnTextActive]}>
+                      {useAdvanceBalance ? 'Applied' : 'Use Credit'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* Order Items & Quantities Summary */}
               {cart && cart.length > 0 && (
@@ -120,7 +196,7 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
               {/* Payment Method Selector */}
               <Text style={styles.sectionLabel}>Payment Method</Text>
               <View style={styles.paymentMethodRow}>
-                {PAYMENT_METHODS.map((method) => {
+                {availablePaymentMethods.map((method) => {
                   const isSelected = paymentMethod === method;
                   return (
                     <TouchableOpacity
@@ -142,10 +218,10 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                   <Text style={styles.sectionLabel}>Amount Received (₹)</Text>
                   {!isCredit && (
                     <TouchableOpacity
-                      onPress={() => onChangeReceivedAmount(finalTotal.toFixed(2))}
+                      onPress={() => onChangeReceivedAmount(netPayable.toFixed(2))}
                       style={styles.exactPill}
                     >
-                      <Text style={styles.exactPillText}>Exact (₹{finalTotal.toFixed(2)})</Text>
+                      <Text style={styles.exactPillText}>Exact (₹{netPayable.toFixed(2)})</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -163,26 +239,32 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                     <Text style={styles.paymentSummaryLabel}>Bill Total:</Text>
                     <Text style={styles.paymentSummaryVal}>₹ {finalTotal.toFixed(2)}</Text>
                   </View>
+                  {useAdvanceBalance && advanceApplied > 0 && (
+                    <View style={styles.paymentSummaryRow}>
+                      <Text style={[styles.paymentSummaryLabel, { color: Palette.emeraldDark }]}>Advance Applied:</Text>
+                      <Text style={[styles.paymentSummaryVal, { color: Palette.emeraldDark }]}>- ₹ {advanceApplied.toFixed(2)}</Text>
+                    </View>
+                  )}
                   <View style={styles.paymentSummaryRow}>
-                    <Text style={styles.paymentSummaryLabel}>Received:</Text>
+                    <Text style={styles.paymentSummaryLabel}>Received Now:</Text>
                     <Text style={styles.paymentSummaryVal}>₹ {parsedReceived.toFixed(2)}</Text>
                   </View>
-                  {parsedReceived < finalTotal ? (
+                  {balanceDue > 0 ? (
                     <View style={styles.paymentSummaryRow}>
                       <Text style={[styles.paymentSummaryLabel, { color: Palette.rose, fontWeight: '800' }]}>
-                        Balance Due (Credit):
+                        {isWalkIn ? 'Shortfall (Unpaid):' : 'Balance Due (Credit):'}
                       </Text>
                       <Text style={[styles.paymentSummaryVal, { color: Palette.rose, fontWeight: '800' }]}>
-                        ₹ {(finalTotal - parsedReceived).toFixed(2)}
+                        ₹ {balanceDue.toFixed(2)}
                       </Text>
                     </View>
-                  ) : parsedReceived > finalTotal ? (
+                  ) : excess > 0 ? (
                     <View style={styles.paymentSummaryRow}>
                       <Text style={[styles.paymentSummaryLabel, { color: Palette.emerald, fontWeight: '800' }]}>
-                        Change to Return:
+                        Excess Amount:
                       </Text>
                       <Text style={[styles.paymentSummaryVal, { color: Palette.emerald, fontWeight: '800' }]}>
-                        ₹ {(parsedReceived - finalTotal).toFixed(2)}
+                        ₹ {excess.toFixed(2)}
                       </Text>
                     </View>
                   ) : (
@@ -196,12 +278,65 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                     </View>
                   )}
                 </View>
+
+                {/* Walk-in Due Blocked Warning */}
+                {isWalkInShortfall && (
+                  <View style={styles.walkInDueBlockedNotice}>
+                    <Ionicons name="alert-circle" size={16} color={Palette.rose} />
+                    <Text style={styles.walkInDueBlockedText}>
+                      Walk-in customers must pay in full. Dues/credit are not allowed. Shortfall to collect: ₹{(netPayable - parsedReceived).toFixed(2)}.
+                    </Text>
+                  </View>
+                )}
+
+                {/* Excess Amount Handling Option */}
+                {excess > 0 && !isWalkIn && (
+                  <View style={styles.excessContainer}>
+                    <Text style={styles.excessTitle}>Action for Excess ₹{excess.toFixed(2)}:</Text>
+                    <View style={styles.excessRadioRow}>
+                      <TouchableOpacity
+                        style={[styles.excessBtn, !saveExcessAsAdvance && styles.excessBtnActive]}
+                        onPress={() => onToggleSaveExcessAsAdvance?.(false)}
+                      >
+                        <Ionicons
+                          name={!saveExcessAsAdvance ? 'radio-button-on' : 'radio-button-off'}
+                          size={15}
+                          color={!saveExcessAsAdvance ? Palette.bluePrimary : Palette.textSecondary}
+                        />
+                        <Text style={[styles.excessBtnText, !saveExcessAsAdvance && styles.excessBtnTextActive]}>
+                          Return Change (₹{excess.toFixed(2)})
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.excessBtn, saveExcessAsAdvance && styles.excessBtnActive]}
+                        onPress={() => onToggleSaveExcessAsAdvance?.(true)}
+                      >
+                        <Ionicons
+                          name={saveExcessAsAdvance ? 'radio-button-on' : 'radio-button-off'}
+                          size={15}
+                          color={saveExcessAsAdvance ? Palette.emerald : Palette.textSecondary}
+                        />
+                        <Text style={[styles.excessBtnText, saveExcessAsAdvance && styles.excessBtnTextActive]}>
+                          Save as Advance Credit (+₹{excess.toFixed(2)})
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {excess > 0 && isWalkIn && (
+                  <View style={styles.walkInChangeNotice}>
+                    <Ionicons name="cash-outline" size={16} color={Palette.emerald} />
+                    <Text style={styles.walkInChangeNoticeText}>
+                      Change to Return: <Text style={{ fontWeight: '800' }}>₹{excess.toFixed(2)}</Text>
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* Customer Details */}
-              <Text style={styles.sectionLabel}>
-                Customer Details
-              </Text>
+              <Text style={styles.sectionLabel}>Customer Details</Text>
 
               <View
                 style={[
@@ -242,7 +377,7 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                 </View>
               )}
 
-              {/* Only for walk-in customer, show the mobile number field */}
+              {/* For walk-in customer, show the mobile number field */}
               {isWalkIn && (
                 <View style={{ marginBottom: 16 }}>
                   <Input
@@ -258,17 +393,25 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                   </Text>
                 </View>
               )}
+            </ScrollView>
 
-              {/* Confirm Checkout Action */}
+            {/* Pinned Bottom Action */}
+            <View style={styles.checkoutFooter}>
               <Button
-                title={isProcessingCheckout ? 'Finalizing Bill & Tax Invoice...' : 'Generate Bill & Receipt'}
+                title={
+                  isProcessingCheckout
+                    ? 'Finalizing Bill & Tax Invoice...'
+                    : isWalkInShortfall
+                    ? `Pay in Full (Shortfall ₹${(netPayable - parsedReceived).toFixed(2)})`
+                    : 'Generate Bill & Receipt'
+                }
                 variant="primary"
                 size="lg"
                 loading={isProcessingCheckout}
-                disabled={!customerName.trim() || isProcessingCheckout}
+                disabled={!customerName.trim() || isDueMissingPhone || isWalkInShortfall || isProcessingCheckout}
                 onPress={onConfirmCheckout}
               />
-            </ScrollView>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -295,6 +438,12 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     ...Shadows.lg,
   },
+  checkoutFooter: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Palette.borderLight,
+    backgroundColor: '#FFFFFF',
+  },
   checkoutHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -313,7 +462,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#A7F3D0',
   },
@@ -322,10 +471,74 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Palette.emeraldDark,
   },
+  advanceDeductedNote: {
+    fontSize: 11,
+    color: Palette.emeraldDark,
+    marginTop: 2,
+  },
   checkoutAmountValue: {
     fontSize: 20,
     fontWeight: '800',
     color: Palette.emeraldDark,
+  },
+  existingDueNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Palette.roseLight,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+    marginBottom: 10,
+    gap: 6,
+  },
+  existingDueNoticeText: {
+    fontSize: 12,
+    color: Palette.rose,
+    fontWeight: '600',
+    flex: 1,
+  },
+  advanceCreditNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Palette.surfaceLight,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    marginBottom: 10,
+  },
+  advanceCreditTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Palette.emeraldDark,
+  },
+  advanceCreditSubtitle: {
+    fontSize: 11,
+    color: Palette.textSecondary,
+  },
+  useAdvanceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Palette.emeraldLight,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  useAdvanceBtnActive: {
+    backgroundColor: Palette.emerald,
+    borderColor: Palette.emerald,
+  },
+  useAdvanceBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Palette.emeraldDark,
+  },
+  useAdvanceBtnTextActive: {
+    color: '#FFFFFF',
   },
   sectionLabel: {
     fontSize: 12,
@@ -356,7 +569,7 @@ const styles = StyleSheet.create({
   paymentMethodText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.textSecondary,
+    color: Palette.textPrimary,
   },
   paymentMethodTextActive: {
     color: '#FFFFFF',
@@ -365,7 +578,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
   },
   exactPill: {
     backgroundColor: Palette.blueSoft,
@@ -379,45 +591,81 @@ const styles = StyleSheet.create({
     color: Palette.bluePrimary,
   },
   currencyPrefix: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: Palette.textSecondary,
   },
   paymentSummaryBox: {
     backgroundColor: Palette.surfaceLight,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 10,
     marginTop: 8,
     borderWidth: 1,
     borderColor: Palette.borderLight,
+    gap: 4,
   },
   paymentSummaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 2,
+    alignItems: 'center',
   },
   paymentSummaryLabel: {
     fontSize: 12,
     color: Palette.textSecondary,
   },
   paymentSummaryVal: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: Palette.textPrimary,
   },
-  fieldErrorText: {
+  excessContainer: {
+    marginTop: 8,
+    backgroundColor: '#F0FDF4',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  excessTitle: {
     fontSize: 11,
-    color: Palette.rose,
-    marginTop: 2,
-    marginLeft: 4,
+    fontWeight: '700',
+    color: Palette.emeraldDark,
+    marginBottom: 6,
+  },
+  excessRadioRow: {
+    gap: 6,
+  },
+  excessBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+  },
+  excessBtnActive: {
+    borderColor: Palette.emerald,
+    backgroundColor: Palette.emeraldLight,
+  },
+  excessBtnText: {
+    fontSize: 11,
+    color: Palette.textPrimary,
+    fontWeight: '600',
+  },
+  excessBtnTextActive: {
+    color: Palette.emeraldDark,
+    fontWeight: '700',
   },
   customerPreviewBox: {
     backgroundColor: Palette.surfaceLight,
     borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
+    padding: 12,
     borderWidth: 1,
     borderColor: Palette.borderLight,
+    marginBottom: 10,
   },
   customerPreviewLeft: {
     flexDirection: 'row',
@@ -441,17 +689,23 @@ const styles = StyleSheet.create({
     color: Palette.textSecondary,
     marginTop: 1,
   },
+  fieldErrorText: {
+    fontSize: 11,
+    color: Palette.rose,
+    fontWeight: '600',
+    marginTop: 2,
+    marginBottom: 6,
+  },
   optionalHelperText: {
     fontSize: 11,
-    color: Palette.textSecondary,
-    marginTop: 3,
-    marginLeft: 4,
-    fontStyle: 'italic',
+    color: Palette.textMuted,
+    marginTop: 2,
+    marginBottom: 6,
   },
   orderSummaryCard: {
     backgroundColor: Palette.surfaceLight,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
     marginBottom: 14,
     borderWidth: 1,
     borderColor: Palette.borderLight,
@@ -461,44 +715,70 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Palette.textSecondary,
     marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   orderSummaryItemRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: Palette.borderLight,
+    alignItems: 'center',
+    marginBottom: 6,
   },
   orderSummaryItemName: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: Palette.textPrimary,
   },
   orderSummaryItemMeta: {
-    fontSize: 11,
-    color: Palette.textSecondary,
-    marginTop: 1,
+    fontSize: 10,
+    color: Palette.textMuted,
   },
   orderSummaryQtyPill: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: Palette.borderLight,
-    paddingHorizontal: 8,
+    backgroundColor: Palette.surfaceMuted,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 4,
     marginRight: 8,
   },
   orderSummaryQtyText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Palette.bluePrimary,
+    fontSize: 10,
+    fontWeight: '600',
+    color: Palette.textSecondary,
   },
   orderSummaryItemTotal: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: Palette.navyPrimary,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Palette.textPrimary,
+  },
+  walkInDueBlockedNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Palette.roseLight,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+    marginTop: 8,
+    gap: 6,
+  },
+  walkInDueBlockedText: {
+    fontSize: 12,
+    color: Palette.rose,
+    fontWeight: '600',
+    flex: 1,
+  },
+  walkInChangeNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginTop: 8,
+    gap: 6,
+  },
+  walkInChangeNoticeText: {
+    fontSize: 12,
+    color: Palette.emeraldDark,
+    fontWeight: '600',
   },
 });
