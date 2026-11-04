@@ -40,6 +40,18 @@ import {
   StockTransferListParams,
 } from '@/types/api';
 
+// Purge obsolete trycloudflare tunnel URL from web localStorage if present
+if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+  try {
+    const cached = window.localStorage.getItem('@saveshop_api_url');
+    if (cached && (cached.includes('trycloudflare.com') || cached.includes('192.168.29.252'))) {
+      window.localStorage.removeItem('@saveshop_api_url');
+    }
+  } catch {
+    // ignore storage cleanup error
+  }
+}
+
 export const isLocalEnvironment = (): boolean => {
   // Explicit overrides if defined
   if (process.env.EXPO_PUBLIC_FORCE_PROD === 'true') {
@@ -94,8 +106,17 @@ export const getProductionApiUrl = (): string => {
     Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ||
     Constants.expoConfig?.extra?.apiUrl;
 
+  // On web deployed: use same-origin reverse proxy unless an explicit valid non-trycloudflare prodUrl override is set
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+    if (!prodUrl || prodUrl.includes('trycloudflare.com')) {
+      return window.location.origin.replace(/\/+$/, '');
+    }
+  }
+
   if (prodUrl && typeof prodUrl === 'string' && prodUrl.trim() !== '') {
-    return prodUrl.trim().replace(/\/+$/, '');
+    if (!prodUrl.includes('trycloudflare.com')) {
+      return prodUrl.trim().replace(/\/+$/, '');
+    }
   }
 
   // Same-origin web fallback if deployed on web server with reverse proxy
@@ -198,8 +219,8 @@ export const setClientAuth = (token: string | null, storeId: string | null, emai
 export const getApiBaseUrl = async (): Promise<string> => {
   try {
     const saved = await AsyncStorage.getItem('@saveshop_api_url');
-    // Clean up stale hardcoded IP if previously saved
-    if (saved && saved.includes('192.168.29.252')) {
+    // Clean up stale hardcoded IP or obsolete trycloudflare tunnel URL
+    if (saved && (saved.includes('192.168.29.252') || saved.includes('trycloudflare.com'))) {
       await AsyncStorage.removeItem('@saveshop_api_url');
     } else if (saved && saved.trim() !== '') {
       return saved.trim().replace(/\/+$/, '');
