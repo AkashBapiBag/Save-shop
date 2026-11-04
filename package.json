@@ -58,7 +58,9 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "build:apk:staging": "powershell -ExecutionPolicy Bypass -File ./scripts/build-apk.ps1 -Env staging",
+    "build:apk:prod": "powershell -ExecutionPolicy Bypass -File ./scripts/build-apk.ps1 -Env prod"
   },
   "private": true
 }

@@ -597,7 +597,7 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
                       <View style={styles.destStoreIconBox}>
                         <Ionicons name="business" size={20} color={Palette.bluePrimary} />
                       </View>
-                      <View style={{ flex: 1, marginHorizontal: 12 }}>
+                      <View style={{ flex: 1, minWidth: 0, marginHorizontal: 12 }}>
                         <Text style={styles.destStoreName} numberOfLines={1}>
                           {destStore?.name || 'Select Destination Store'}
                         </Text>
@@ -991,15 +991,19 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
                           <Text style={styles.trfItemsSectionLabel}>Transferred Products:</Text>
                           {(trf.items || []).map((it) => (
                             <View key={it.item_id} style={styles.trfItemRow}>
-                              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <View style={styles.trfItemDetails}>
                                 <Text style={styles.trfItemName}>• {it.product_name}</Text>
                                 {it.auto_created_product && (
-                                  <Badge label="Auto-Created in Dest" variant="purple" size="sm" />
+                                  <View style={styles.trfAutoCreatedBadgeWrapper}>
+                                    <Badge label="Auto-Created in Dest" variant="purple" size="sm" />
+                                  </View>
                                 )}
                               </View>
-                              <Text style={styles.trfItemQty}>
-                                {Number(it.quantity).toFixed(2)} {it.unit}
-                              </Text>
+                              <View style={styles.trfItemQtyContainer}>
+                                <Text style={styles.trfItemQty}>
+                                  {Number(it.quantity).toFixed(2)} {it.unit}
+                                </Text>
+                              </View>
                             </View>
                           ))}
                         </View>
@@ -1107,6 +1111,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     overflow: 'hidden',
+    maxWidth: '100%',
+    maxHeight: '96%',
     ...Shadows.lg,
   },
   modalBodyContainer: {
@@ -1403,11 +1409,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Palette.emeraldDark,
     fontWeight: '600',
+    flex: 1,
   },
   destMatchTextAutoCreate: {
     fontSize: 11,
     color: Palette.purple,
     fontWeight: '600',
+    flex: 1,
   },
   quantityRow: {
     flexDirection: 'row',
@@ -1525,6 +1533,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: 6,
   },
   fixedFooterLabel: {
     fontSize: 10.5,
@@ -1659,15 +1669,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 6,
   },
   trfNumber: {
     fontSize: 14,
     fontWeight: '800',
     color: Palette.navyPrimary,
+    flexShrink: 1,
   },
   trfDate: {
     fontSize: 11.5,
     color: Palette.textMuted,
+    flexShrink: 0,
   },
   trfPerspectiveRow: {
     marginBottom: 8,
@@ -1681,11 +1695,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
     alignSelf: 'flex-start',
+    maxWidth: '100%',
   },
   outwardPerspectiveText: {
     fontSize: 11.5,
     fontWeight: '600',
     color: Palette.rose,
+    flexShrink: 1,
   },
   inwardPerspectiveBadge: {
     flexDirection: 'row',
@@ -1696,11 +1712,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
     alignSelf: 'flex-start',
+    maxWidth: '100%',
   },
   inwardPerspectiveText: {
     fontSize: 11.5,
     fontWeight: '600',
     color: Palette.emerald,
+    flexShrink: 1,
   },
   neutralPerspectiveBadge: {
     flexDirection: 'row',
@@ -1711,11 +1729,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
     alignSelf: 'flex-start',
+    maxWidth: '100%',
   },
   neutralPerspectiveText: {
     fontSize: 11.5,
     fontWeight: '600',
     color: Palette.bluePrimary,
+    flexShrink: 1,
   },
   trfItemsContainer: {
     marginBottom: 8,
@@ -1732,34 +1752,56 @@ const styles = StyleSheet.create({
   },
   trfItemRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingVertical: 3,
+    paddingVertical: 4,
+    gap: 8,
+  },
+  trfItemDetails: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 6,
   },
   trfItemName: {
     fontSize: 12.5,
     color: Palette.navyPrimary,
     fontWeight: '600',
+    lineHeight: 18,
+  },
+  trfAutoCreatedBadgeWrapper: {
+    alignSelf: 'flex-start',
+    marginTop: 3,
+  },
+  trfItemQtyContainer: {
+    flexShrink: 0,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    paddingTop: 1,
   },
   trfItemQty: {
     fontSize: 12.5,
     fontWeight: '800',
     color: Palette.bluePrimary,
+    textAlign: 'right',
   },
   trfFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 4,
+    marginTop: 6,
+    flexWrap: 'wrap',
+    gap: 6,
   },
   trfAdminName: {
     fontSize: 11.5,
     color: Palette.textSecondary,
+    flexShrink: 1,
   },
   trfTotalSummary: {
     fontSize: 11.5,
     fontWeight: '700',
     color: Palette.navyPrimary,
+    flexShrink: 0,
   },
   trfNotesBox: {
     marginTop: 6,

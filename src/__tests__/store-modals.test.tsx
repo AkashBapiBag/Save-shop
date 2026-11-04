@@ -520,7 +520,7 @@ describe('components/inventory/ReceiveStockModal.tsx', () => {
 });
 
 describe('screens/StoreManagementScreen.tsx', () => {
-  it('renders store directory and displays store item', async () => {
+  it('renders store directory and Transfer Stock button for store users/operators', async () => {
     await act(async () => {
       render(
         <AuthProvider>
@@ -530,6 +530,7 @@ describe('screens/StoreManagementScreen.tsx', () => {
     });
 
     expect(await screen.findByText('Store Directory')).toBeDefined();
+    expect(screen.getByText('Transfer Stock')).toBeDefined();
   });
 });
 

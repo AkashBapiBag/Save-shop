@@ -162,6 +162,38 @@ describe('StockTransferModal Component', () => {
     );
   });
 
+  it('renders auto-created product badge cleanly with quantity in history tab without overlap', async () => {
+    const autoCreatedTransfer: StockTransfer = {
+      ...mockTransfers[0],
+      transfer_id: 'trf-2',
+      transfer_number: 'TRF-00002',
+      items: [
+        {
+          item_id: 'item-2',
+          transfer_id: 'trf-2',
+          product_name: 'Aashirvaad Shudh Chakki Atta (10 KG)',
+          category: 'Grocery',
+          unit: 'PACKET',
+          quantity: 2,
+          auto_created_product: true,
+        },
+      ],
+    };
+    vi.mocked(transferApi.listTransfers).mockResolvedValueOnce([autoCreatedTransfer]);
+
+    await act(async () => {
+      render(<StockTransferModal visible={true} onClose={vi.fn()} />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Transfer History & Logs'));
+    });
+
+    expect(screen.getByText('• Aashirvaad Shudh Chakki Atta (10 KG)')).toBeDefined();
+    expect(screen.getByText('Auto-Created in Dest')).toBeDefined();
+    expect(screen.getByText('2.00 PACKET')).toBeDefined();
+  });
+
   it('displays warning when user has fewer than 2 stores', async () => {
     mockAuth.stores = [mockStores[0]]; // Only 1 store
 

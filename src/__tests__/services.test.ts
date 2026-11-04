@@ -17,7 +17,7 @@ import {
   dashboardApi,
   transferApi,
 } from '@/services/api';
-import { buildReceiptHTML, printReceipt, shareReceiptPDF } from '@/services/pdfService';
+import { buildReceiptHTML, printReceipt, shareReceiptPDF, printViaIframeWeb } from '@/services/pdfService';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
@@ -400,10 +400,25 @@ describe('services/pdfService.ts', () => {
   });
 
   it('printReceipt calls Print.printAsync', async () => {
+    vi.mocked(Print.printAsync).mockClear();
     await printReceipt(mockReceipt);
     expect(Print.printAsync).toHaveBeenCalledWith(
       expect.objectContaining({ html: expect.any(String) })
     );
+  });
+
+  it('printReceipt drops concurrent calls while printing is in progress', async () => {
+    vi.mocked(Print.printAsync).mockClear();
+    // Simulate a slow printAsync
+    vi.mocked(Print.printAsync).mockImplementationOnce(
+      () => new Promise((resolve) => setTimeout(resolve, 50))
+    );
+
+    const call1 = printReceipt(mockReceipt);
+    const call2 = printReceipt(mockReceipt);
+    await Promise.all([call1, call2]);
+
+    expect(Print.printAsync).toHaveBeenCalledTimes(1);
   });
 
   it('shareReceiptPDF prints to file and calls Sharing.shareAsync on mobile', async () => {

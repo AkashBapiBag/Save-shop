@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -47,31 +47,21 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
     }
 
     try {
-      const data = await customerApi.listCustomers({
-        search: searchQuery.trim() || undefined,
-        sort_by: sortBy,
-        filter_dues: sortBy === 'dues' ? true : undefined,
-      });
-      setCustomers(data);
+      const data = await customerApi.listCustomers({ limit: 500 });
+      setCustomers(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
       logError('POSCustomerSelectView:loadCustomers', err);
+      setCustomers([]);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [searchQuery, sortBy]);
+  }, []);
 
-  // Load immediately on mount / sort change / store change, or debounced when typing search query
+  // Fetch customers once on mount / store change - customer search is handled in-memory without API roundtrips
   useEffect(() => {
-    const delay = searchQuery ? 200 : 0;
-    const handler = setTimeout(() => {
-      void loadCustomers(false);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [activeStore?.store_id, searchQuery, sortBy, loadCustomers]);
+    void loadCustomers(false);
+  }, [activeStore?.store_id, loadCustomers]);
 
   const handleSelectWalkIn = () => {
     const walkInCustomer: Customer = {
@@ -99,12 +89,63 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
     { key: 'orders', label: 'Most Orders', icon: 'ribbon-outline' },
   ];
 
-  const customersWithDuesCount = customers.filter(
-    (c) => parseFloat(String(c.total_due || 0)) > 0
-  ).length;
-  const totalDuesInStore = customers.reduce(
-    (sum, c) => sum + Math.max(0, parseFloat(String(c.total_due || 0))),
-    0
+  // In-memory customer search and sorting (avoids full-screen reload flicker and unnecessary API calls)
+  const filteredCustomers = useMemo(() => {
+    let list = Array.isArray(customers) ? customers : [];
+
+    // Filter by dues if sort_by is 'dues'
+    if (sortBy === 'dues') {
+      list = list.filter((c) => parseFloat(String(c.total_due || 0)) > 0);
+    }
+
+    // Direct in-memory search
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((c) => {
+        const nameMatch = c.name?.toLowerCase().includes(q);
+        const phoneMatch = c.phone?.toLowerCase().includes(q);
+        return Boolean(nameMatch || phoneMatch);
+      });
+    }
+
+    // Client-side sorting
+    return [...list].sort((a, b) => {
+      if (sortBy === 'name') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      if (sortBy === 'dues') {
+        const dueA = parseFloat(String(a.total_due || 0));
+        const dueB = parseFloat(String(b.total_due || 0));
+        return dueB - dueA || (a.name || '').localeCompare(b.name || '');
+      }
+      if (sortBy === 'spent') {
+        const spentA = parseFloat(String(a.total_spent || 0));
+        const spentB = parseFloat(String(b.total_spent || 0));
+        return spentB - spentA || (a.name || '').localeCompare(b.name || '');
+      }
+      if (sortBy === 'orders') {
+        const ordersA = a.total_orders || 0;
+        const ordersB = b.total_orders || 0;
+        return ordersB - ordersA || (a.name || '').localeCompare(b.name || '');
+      }
+      // 'recent' (default): by last order date or creation date
+      const dateA = new Date(a.last_order_date || a.created_at || 0).getTime();
+      const dateB = new Date(b.last_order_date || b.created_at || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [customers, searchQuery, sortBy]);
+
+  const customersWithDuesCount = useMemo(
+    () => (Array.isArray(customers) ? customers : []).filter((c) => parseFloat(String(c.total_due || 0)) > 0).length,
+    [customers]
+  );
+  const totalDuesInStore = useMemo(
+    () =>
+      (Array.isArray(customers) ? customers : []).reduce(
+        (sum, c) => sum + Math.max(0, parseFloat(String(c.total_due || 0))),
+        0
+      ),
+    [customers]
   );
 
   return (
@@ -191,86 +232,86 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
       </View>
 
       {/* Customer List / States */}
-      {isLoading && !isRefreshing ? (
-        <CustomerListSkeleton itemCount={5} />
-      ) : (
-        <FlatList
-          data={customers}
-          keyExtractor={(item) => item.customer_id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={() => void loadCustomers(true)}
-              colors={[Palette.bluePrimary]}
-              tintColor={Palette.bluePrimary}
-            />
-          }
-          ListHeaderComponent={
-            <View style={styles.listHeaderWrapper}>
-              {/* Always on top: Walk-in Customer Card */}
-              <TouchableOpacity
-                style={styles.walkInCard}
-                activeOpacity={0.7}
-                onPress={handleSelectWalkIn}
-                accessibilityRole="button"
-                accessibilityLabel="Select walk-in customer for billing"
-              >
-                <View style={styles.walkInLeft}>
-                  <View style={styles.walkInAvatarCircle}>
-                    <Ionicons name="walk" size={22} color={Palette.bluePrimary} />
+      <FlatList
+        data={isLoading && !isRefreshing ? [] : filteredCustomers}
+        keyExtractor={(item) => item.customer_id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => void loadCustomers(true)}
+            colors={[Palette.bluePrimary]}
+            tintColor={Palette.bluePrimary}
+          />
+        }
+        ListHeaderComponent={
+          <View style={styles.listHeaderWrapper}>
+            {/* Always on top: Walk-in Customer Card (Constant) */}
+            <TouchableOpacity
+              style={styles.walkInCard}
+              activeOpacity={0.7}
+              onPress={handleSelectWalkIn}
+              accessibilityRole="button"
+              accessibilityLabel="Select walk-in customer for billing"
+            >
+              <View style={styles.walkInLeft}>
+                <View style={styles.walkInAvatarCircle}>
+                  <Ionicons name="walk" size={22} color={Palette.bluePrimary} />
+                </View>
+                <View style={styles.walkInInfoCol}>
+                  <View style={styles.walkInTitleRow}>
+                    <Text style={styles.walkInTitle}>Walk-in Customer</Text>
+                    <View style={styles.walkInBadge}>
+                      <Text style={styles.walkInBadgeText}>Quick Bill</Text>
+                    </View>
                   </View>
-                  <View style={styles.walkInInfoCol}>
-                    <View style={styles.walkInTitleRow}>
-                      <Text style={styles.walkInTitle}>Walk-in Customer</Text>
-                      <View style={styles.walkInBadge}>
-                        <Text style={styles.walkInBadgeText}>Quick Bill</Text>
-                      </View>
-                    </View>
-                    <View style={styles.walkInSubRow}>
-                      <Ionicons name="shield-checkmark-outline" size={12} color={Palette.emerald} style={{ marginRight: 4 }} />
-                      <Text style={styles.walkInSubtitle}>Mobile number optional • Unknown customers</Text>
-                    </View>
+                  <View style={styles.walkInSubRow}>
+                    <Ionicons name="shield-checkmark-outline" size={12} color={Palette.emerald} style={{ marginRight: 4 }} />
+                    <Text style={styles.walkInSubtitle}>Mobile number optional • Unknown customers</Text>
                   </View>
                 </View>
-                <View style={styles.walkInSelectPill}>
-                  <Text style={styles.walkInSelectPillText}>Select</Text>
-                  <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
-
-              {/* Outstanding Dues Notice Banner */}
-              {totalDuesInStore > 0 && sortBy !== 'dues' && (
-                <TouchableOpacity
-                  style={styles.duesNoticeBanner}
-                  onPress={() => setSortBy('dues')}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.duesNoticeLeft}>
-                    <Ionicons name="alert-circle" size={20} color={Palette.rose} />
-                    <View style={{ marginLeft: 8 }}>
-                      <Text style={styles.duesNoticeTitle}>Store Dues: ₹{totalDuesInStore.toFixed(2)}</Text>
-                      <Text style={styles.duesNoticeSubtitle}>
-                        {customersWithDuesCount} {customersWithDuesCount === 1 ? 'customer has' : 'customers have'} pending due. Tap to view.
-                      </Text>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={Palette.rose} />
-                </TouchableOpacity>
-              )}
-
-              {/* Subheader separator for registered phone book customers */}
-              <View style={styles.registeredDividerRow}>
-                <Text style={styles.registeredSectionLabel}>
-                  {searchQuery.trim()
-                    ? `Matching Customers (${customers.length})`
-                    : `Saved Customers (${customers.length})`}
-                </Text>
               </View>
+              <View style={styles.walkInSelectPill}>
+                <Text style={styles.walkInSelectPillText}>Select</Text>
+                <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
+
+            {/* Outstanding Dues Notice Banner */}
+            {totalDuesInStore > 0 && sortBy !== 'dues' && (
+              <TouchableOpacity
+                style={styles.duesNoticeBanner}
+                onPress={() => setSortBy('dues')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.duesNoticeLeft}>
+                  <Ionicons name="alert-circle" size={20} color={Palette.rose} />
+                  <View style={{ marginLeft: 8 }}>
+                    <Text style={styles.duesNoticeTitle}>Store Dues: ₹{totalDuesInStore.toFixed(2)}</Text>
+                    <Text style={styles.duesNoticeSubtitle}>
+                      {customersWithDuesCount} {customersWithDuesCount === 1 ? 'customer has' : 'customers have'} pending due. Tap to view.
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={Palette.rose} />
+              </TouchableOpacity>
+            )}
+
+            {/* Subheader separator for registered phone book customers */}
+            <View style={styles.registeredDividerRow}>
+              <Text style={styles.registeredSectionLabel}>
+                {searchQuery.trim()
+                  ? `Matching Customers (${filteredCustomers.length})`
+                  : `Saved Customers (${isLoading && !isRefreshing ? '...' : filteredCustomers.length})`}
+              </Text>
             </View>
-          }
-          ListEmptyComponent={
+          </View>
+        }
+        ListEmptyComponent={
+          isLoading && !isRefreshing ? (
+            <CustomerListSkeleton itemCount={5} />
+          ) : (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
                 <Ionicons
@@ -297,17 +338,17 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
                 <Text style={styles.emptyAddBtnText}>Bill as Walk-in Customer</Text>
               </TouchableOpacity>
             </View>
-          }
-          renderItem={({ item }) => (
-            <POSCustomerCard
-              customer={item}
-              onSelect={onSelectCustomer}
-              onViewHistory={onViewCustomerHistory}
-              onSettleDue={(c) => setSettleCustomer(c)}
-            />
-          )}
-        />
-      )}
+          )
+        }
+        renderItem={({ item }) => (
+          <POSCustomerCard
+            customer={item}
+            onSelect={onSelectCustomer}
+            onViewHistory={onViewCustomerHistory}
+            onSettleDue={(c) => setSettleCustomer(c)}
+          />
+        )}
+      />
 
       {/* Settle Due Modal */}
       <SettleDueModal

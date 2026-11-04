@@ -205,25 +205,25 @@ export const StoreManagementScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Top Banner & Header */}
       <View style={styles.headerBar}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Store Directory</Text>
-          <Text style={styles.headerSub}>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle} numberOfLines={1}>Store Directory</Text>
+          <Text style={styles.headerSub} numberOfLines={1}>
             {stores.length} store location{stores.length === 1 ? '' : 's'}
           </Text>
         </View>
 
-        {isAdmin && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {stores.length >= 2 && (
-              <TouchableOpacity
-                style={styles.transferButton}
-                activeOpacity={0.8}
-                onPress={() => setTransferModalVisible(true)}
-              >
-                <Ionicons name="swap-horizontal" size={16} color="#FFFFFF" />
-                <Text style={styles.createButtonText}>Transfer Stock</Text>
-              </TouchableOpacity>
-            )}
+        <View style={styles.headerActions}>
+          {stores.length >= 1 && (
+            <TouchableOpacity
+              style={styles.transferButton}
+              activeOpacity={0.8}
+              onPress={() => setTransferModalVisible(true)}
+            >
+              <Ionicons name="swap-horizontal" size={16} color="#FFFFFF" />
+              <Text style={styles.createButtonText}>Transfer Stock</Text>
+            </TouchableOpacity>
+          )}
+          {isAdmin && (
             <TouchableOpacity
               style={styles.createButton}
               activeOpacity={0.8}
@@ -232,8 +232,8 @@ export const StoreManagementScreen: React.FC = () => {
               <Ionicons name="add" size={18} color="#FFFFFF" />
               <Text style={styles.createButtonText}>Add Store</Text>
             </TouchableOpacity>
-          </View>
-        )}
+          )}
+        </View>
       </View>
 
       {/* Active User Google Profile Banner */}
@@ -407,6 +407,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: Palette.borderLight,
+    gap: 8,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 4,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
+    flexWrap: 'wrap',
   },
   headerTitle: {
     fontSize: 18,

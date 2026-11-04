@@ -521,54 +521,28 @@ export const StoreUsersSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) 
 
 /**
  * Skeleton loader for Customer Phone Book / Directory in POS screen.
- * Previews quick walk-in customer card and customer row items.
+ * Previews saved customer row items (Walk-in customer is constant and rendered in parent).
  */
 export const CustomerListSkeleton: React.FC<{ itemCount?: number }> = ({ itemCount = 5 }) => {
   return (
-    <View style={styles.pageContainer} testID="customer-list-skeleton">
-      <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Walk-in Customer Quick Card Skeleton */}
-        <View style={styles.customerWalkInCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 }}>
-            <Skeleton width={42} height={42} borderRadius={21} style={{ marginRight: 12 }} />
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Skeleton width="45%" height={16} borderRadius={4} style={{ marginRight: 8 }} />
-                <Skeleton width={60} height={18} borderRadius={9} />
-              </View>
-              <Skeleton width="70%" height={12} borderRadius={4} />
+    <View testID="customer-list-skeleton">
+      {/* Customer Directory Row Cards */}
+      {Array.from({ length: itemCount }).map((_, idx) => (
+        <View key={idx} style={styles.customerRowCard}>
+          <Skeleton width={42} height={42} borderRadius={21} style={{ marginRight: 12 }} />
+          <View style={{ flex: 1, marginRight: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Skeleton width="50%" height={15} borderRadius={4} style={{ marginRight: 8 }} />
+              {idx % 2 === 0 && <Skeleton width={50} height={16} borderRadius={6} />}
             </View>
+            <Skeleton width="40%" height={12} borderRadius={4} style={{ marginBottom: 4 }} />
+            <Skeleton width="30%" height={11} borderRadius={3} />
           </View>
-          <Skeleton width={60} height={28} borderRadius={14} />
-        </View>
-
-        {/* Section Header Strip Skeleton */}
-        <View style={[styles.rowBetween, { marginVertical: 12, paddingHorizontal: 2 }]}>
-          <Skeleton width={130} height={14} borderRadius={4} />
-          <Skeleton width={50} height={12} borderRadius={4} />
-        </View>
-
-        {/* Customer Directory Row Cards */}
-        {Array.from({ length: itemCount }).map((_, idx) => (
-          <View key={idx} style={styles.customerRowCard}>
-            <Skeleton width={42} height={42} borderRadius={21} style={{ marginRight: 12 }} />
-            <View style={{ flex: 1, marginRight: 10 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Skeleton width="50%" height={15} borderRadius={4} style={{ marginRight: 8 }} />
-                {idx % 2 === 0 && <Skeleton width={50} height={16} borderRadius={6} />}
-              </View>
-              <Skeleton width="40%" height={12} borderRadius={4} style={{ marginBottom: 4 }} />
-              <Skeleton width="30%" height={11} borderRadius={3} />
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Skeleton width={64} height={28} borderRadius={8} />
-            </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Skeleton width={64} height={28} borderRadius={8} />
           </View>
-        ))}
-      </ScrollView>
+        </View>
+      ))}
     </View>
   );
 };

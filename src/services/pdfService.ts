@@ -574,6 +574,21 @@ export const printViaIframeWeb = (html: string, title?: string): Promise<boolean
   }
 
   return new Promise((resolve) => {
+    let hasExecuted = false;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    let checkTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const cleanupTimers = () => {
+      if (fallbackTimer) {
+        clearTimeout(fallbackTimer);
+        fallbackTimer = null;
+      }
+      if (checkTimer) {
+        clearTimeout(checkTimer);
+        checkTimer = null;
+      }
+    };
+
     try {
       const existingFrame = document.getElementById('__save_shop_print_frame__');
       if (existingFrame && existingFrame.parentNode) {
@@ -595,6 +610,7 @@ export const printViaIframeWeb = (html: string, title?: string): Promise<boolean
 
       const frameDoc = iframe.contentDocument || iframe.contentWindow?.document;
       if (!frameDoc || !iframe.contentWindow) {
+        cleanupTimers();
         if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
         resolve(false);
         return;
@@ -610,6 +626,10 @@ export const printViaIframeWeb = (html: string, title?: string): Promise<boolean
       }
 
       const executePrint = () => {
+        if (hasExecuted) return;
+        hasExecuted = true;
+        cleanupTimers();
+
         try {
           iframe.contentWindow?.focus();
           if (typeof iframe.contentWindow?.print === 'function') {
@@ -635,13 +655,14 @@ export const printViaIframeWeb = (html: string, title?: string): Promise<boolean
 
       const images = Array.from(frameDoc.images || []);
       if (images.length === 0) {
-        setTimeout(executePrint, 200);
+        checkTimer = setTimeout(executePrint, 200);
       } else {
         let loaded = 0;
         const checkDone = () => {
           loaded++;
           if (loaded >= images.length) {
-            setTimeout(executePrint, 200);
+            cleanupTimers();
+            checkTimer = setTimeout(executePrint, 200);
           }
         };
 
@@ -654,85 +675,105 @@ export const printViaIframeWeb = (html: string, title?: string): Promise<boolean
           }
         });
 
-        setTimeout(executePrint, 1200);
+        fallbackTimer = setTimeout(executePrint, 1200);
       }
     } catch (err) {
+      cleanupTimers();
       console.warn('Failed to setup print iframe:', err);
       resolve(false);
     }
   });
 };
 
+let isPrintInProgress = false;
+let isShareInProgress = false;
+
 export const printReceipt = async (receipt: ReceiptResponse): Promise<void> => {
-  const html = buildReceiptHTML(receipt);
+  if (isPrintInProgress) {
+    return;
+  }
+  isPrintInProgress = true;
+  try {
+    const html = buildReceiptHTML(receipt);
 
-  const seqNum =
-    receipt.invoice_seq !== undefined && receipt.invoice_seq !== null
-      ? receipt.invoice_seq
-      : receipt.invoice_number.includes('-')
-      ? receipt.invoice_number.split('-').pop() || receipt.invoice_number
-      : receipt.invoice_number;
-  const invoiceDocTitle = `Tax_Invoice_${seqNum}`;
+    const seqNum =
+      receipt.invoice_seq !== undefined && receipt.invoice_seq !== null
+        ? receipt.invoice_seq
+        : receipt.invoice_number.includes('-')
+        ? receipt.invoice_number.split('-').pop() || receipt.invoice_number
+        : receipt.invoice_number;
+    const invoiceDocTitle = `Tax_Invoice_${seqNum}`;
 
-  if (Platform.OS === 'web') {
-    const isJsdom =
-      typeof navigator !== 'undefined' &&
-      navigator.userAgent &&
-      navigator.userAgent.toLowerCase().includes('jsdom');
+    if (Platform.OS === 'web') {
+      const isJsdom =
+        typeof navigator !== 'undefined' &&
+        navigator.userAgent &&
+        navigator.userAgent.toLowerCase().includes('jsdom');
 
-    if (!isJsdom && typeof window !== 'undefined' && typeof document !== 'undefined') {
-      const printed = await printViaIframeWeb(html, invoiceDocTitle);
-      if (printed) return;
+      if (!isJsdom && typeof window !== 'undefined' && typeof document !== 'undefined') {
+        const printed = await printViaIframeWeb(html, invoiceDocTitle);
+        if (printed) return;
+      }
+
+      await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
+      return;
     }
 
     await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
-    return;
+  } finally {
+    isPrintInProgress = false;
   }
-
-  await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
 };
 
 export const shareReceiptPDF = async (receipt: ReceiptResponse): Promise<void> => {
-  const html = buildReceiptHTML(receipt);
-
-  const seqNum =
-    receipt.invoice_seq !== undefined && receipt.invoice_seq !== null
-      ? receipt.invoice_seq
-      : receipt.invoice_number.includes('-')
-      ? receipt.invoice_number.split('-').pop() || receipt.invoice_number
-      : receipt.invoice_number;
-  const invoiceDocTitle = `Tax_Invoice_${seqNum}`;
-
-  if (Platform.OS === 'web') {
-    const isJsdom =
-      typeof navigator !== 'undefined' &&
-      navigator.userAgent &&
-      navigator.userAgent.toLowerCase().includes('jsdom');
-
-    if (!isJsdom && typeof window !== 'undefined' && typeof document !== 'undefined') {
-      const printed = await printViaIframeWeb(html, invoiceDocTitle);
-      if (printed) return;
-    }
-
-    await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
+  if (isShareInProgress) {
     return;
   }
-
+  isShareInProgress = true;
   try {
-    const { uri } = await Print.printToFileAsync({ html, ...A4_PAGE_OPTIONS });
-    const isAvailable = await Sharing.isAvailableAsync();
+    const html = buildReceiptHTML(receipt);
 
-    if (isAvailable) {
-      await Sharing.shareAsync(uri, {
-        mimeType: 'application/pdf',
-        dialogTitle: `Tax Invoice ${receipt.invoice_number}`,
-        UTI: 'com.adobe.pdf',
-      });
-    } else {
+    const seqNum =
+      receipt.invoice_seq !== undefined && receipt.invoice_seq !== null
+        ? receipt.invoice_seq
+        : receipt.invoice_number.includes('-')
+        ? receipt.invoice_number.split('-').pop() || receipt.invoice_number
+        : receipt.invoice_number;
+    const invoiceDocTitle = `Tax_Invoice_${seqNum}`;
+
+    if (Platform.OS === 'web') {
+      const isJsdom =
+        typeof navigator !== 'undefined' &&
+        navigator.userAgent &&
+        navigator.userAgent.toLowerCase().includes('jsdom');
+
+      if (!isJsdom && typeof window !== 'undefined' && typeof document !== 'undefined') {
+        const printed = await printViaIframeWeb(html, invoiceDocTitle);
+        if (printed) return;
+      }
+
+      await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
+      return;
+    }
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html, ...A4_PAGE_OPTIONS });
+      const isAvailable = await Sharing.isAvailableAsync();
+
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `Tax Invoice ${receipt.invoice_number}`,
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
+      }
+    } catch (error: any) {
+      console.warn('Sharing error, fallback to print dialog:', error);
       await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
     }
-  } catch (error: any) {
-    console.warn('Sharing error, fallback to print dialog:', error);
-    await Print.printAsync({ html, ...A4_PAGE_OPTIONS });
+  } finally {
+    isShareInProgress = false;
   }
 };

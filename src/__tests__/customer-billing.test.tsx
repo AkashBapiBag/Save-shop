@@ -347,7 +347,7 @@ describe('POS Customer Components & Billing Flow', () => {
   });
 
   describe('POSCustomerSelectView', () => {
-    it('displays CustomerListSkeleton while customers phone book is loading', () => {
+    it('displays CustomerListSkeleton while customers phone book is loading, while keeping walk-in customer card constant', () => {
       vi.mocked(customerApi.listCustomers).mockReturnValue(new Promise(() => {}));
 
       render(
@@ -359,7 +359,48 @@ describe('POS Customer Components & Billing Flow', () => {
         </AuthProvider>
       );
 
+      // Skeleton only shown for saved customer section
       expect(screen.getByTestId('customer-list-skeleton')).toBeDefined();
+      // Walk-in Customer card is constant and visible
+      expect(screen.getByText('Walk-in Customer')).toBeDefined();
+      expect(screen.getByText(/Mobile number optional • Unknown customers/i)).toBeDefined();
+    });
+
+    it('searches customers in-memory without making additional API calls', async () => {
+      vi.mocked(customerApi.listCustomers).mockResolvedValue([mockCustomerWithOrders, mockNewCustomer]);
+
+      render(
+        <AuthProvider>
+          <POSCustomerSelectView
+            onSelectCustomer={() => {}}
+            onViewCustomerHistory={() => {}}
+          />
+        </AuthProvider>
+      );
+
+      // Initially loads both customers
+      expect(await screen.findByText('Sourav Ganguly')).toBeDefined();
+      expect(screen.getByText('Sunita Das')).toBeDefined();
+      expect(customerApi.listCustomers).toHaveBeenCalledTimes(1);
+
+      // Search by name
+      const searchInput = screen.getByPlaceholderText('Search phone book by name or mobile number...');
+      fireEvent.change(searchInput, { target: { value: 'Sourav' } });
+
+      // In-memory filter immediate match
+      expect(screen.getByText('Sourav Ganguly')).toBeDefined();
+      expect(screen.queryByText('Sunita Das')).toBeNull();
+      // Walk-in customer is always constant
+      expect(screen.getByText('Walk-in Customer')).toBeDefined();
+
+      // No new API calls triggered on search typing
+      expect(customerApi.listCustomers).toHaveBeenCalledTimes(1);
+
+      // Search by phone number
+      fireEvent.change(searchInput, { target: { value: '98300' } });
+      expect(screen.getByText('Sourav Ganguly')).toBeDefined();
+      expect(screen.queryByText('Sunita Das')).toBeNull();
+      expect(customerApi.listCustomers).toHaveBeenCalledTimes(1);
     });
 
     it('always renders walk-in customer at the top with optional mobile number', async () => {

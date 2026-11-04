@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -37,6 +37,8 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   const activeStore = auth?.activeStore || null;
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
   const [isSharing, setIsSharing] = useState<boolean>(false);
+  const isPrintingRef = useRef<boolean>(false);
+  const isSharingRef = useRef<boolean>(false);
 
   if (!receipt) return null;
 
@@ -160,6 +162,8 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   };
 
   const handlePrint = async () => {
+    if (isPrintingRef.current || isPrinting) return;
+    isPrintingRef.current = true;
     setIsPrinting(true);
     try {
       await printReceipt(getEnrichedReceipt());
@@ -167,10 +171,15 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
       Alert.alert('Print Error', err?.message || 'Could not print bill.');
     } finally {
       setIsPrinting(false);
+      setTimeout(() => {
+        isPrintingRef.current = false;
+      }, 500);
     }
   };
 
   const handleShare = async () => {
+    if (isSharingRef.current || isSharing) return;
+    isSharingRef.current = true;
     setIsSharing(true);
     try {
       await shareReceiptPDF(getEnrichedReceipt());
@@ -178,6 +187,9 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
       Alert.alert('PDF Export', err?.message || 'Could not share PDF.');
     } finally {
       setIsSharing(false);
+      setTimeout(() => {
+        isSharingRef.current = false;
+      }, 500);
     }
   };
 
