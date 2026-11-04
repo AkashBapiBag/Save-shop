@@ -9,7 +9,9 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ReceiptResponse } from '@/types/api';
 import { printReceipt, shareReceiptPDF } from '@/services/pdfService';
@@ -29,6 +31,8 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
   onClose,
   receipt,
 }) => {
+  const insets = useSafeAreaInsets();
+  const safeTopPadding = Math.max(insets.top, Platform.OS === 'android' ? 24 : 10);
   const auth = React.useContext(AuthContext) as { activeStore?: any } | undefined;
   const activeStore = auth?.activeStore || null;
   const [isPrinting, setIsPrinting] = useState<boolean>(false);
@@ -182,12 +186,18 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
       <View style={styles.modalRoot}>
         {/* Top Control Bar */}
         <View
-          style={styles.topControlBar}
+          style={[styles.topControlBar, { paddingTop: safeTopPadding }]}
           className="no-print"
           {...({ 'data-no-print': 'true' } as any)}
         >
-          <TouchableOpacity onPress={onClose} style={styles.closeIconButton}>
-            <Ionicons name="close" size={24} color={Palette.textPrimary} />
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.closeIconButton}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel="Close tax invoice"
+          >
+            <Ionicons name="close" size={26} color={Palette.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.topBarTitle}>Tax Invoice</Text>
           <View style={{ width: 36 }} />
@@ -196,10 +206,15 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
         {/* Invoice Canvas */}
         <ScrollView style={styles.scrollCanvas} contentContainerStyle={styles.scrollContent}>
           <View style={styles.paperSheet}>
-            {/* Header Title: Tax Invoice */}
+            {/* Header Title: TAX INVOICE */}
             <View style={styles.taxTitleContainer}>
-              <Text style={styles.taxTitleLine}>Tax</Text>
-              <Text style={styles.taxTitleLine}>Invoice</Text>
+              <Text
+                style={styles.taxTitleLine}
+                textBreakStrategy="simple"
+                numberOfLines={1}
+              >
+                TAX INVOICE{' '}
+              </Text>
             </View>
 
             {/* Store Information Box */}
@@ -282,7 +297,7 @@ export const TaxInvoiceModal: React.FC<TaxInvoiceModalProps> = ({
                   </Text>
                 </View>
                 <View style={[styles.cell, styles.colCashback]}>
-                  <Text style={styles.thText}>Cashback</Text>
+                  <Text style={styles.thText}>S.I. Point</Text>
                 </View>
                 <View style={[styles.cell, styles.colQty]}>
                   <Text style={styles.thText}>Qty</Text>
@@ -503,13 +518,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: Palette.borderLight,
     ...Shadows.sm,
   },
   closeIconButton: {
     padding: 6,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   topBarTitle: {
     fontSize: 17,
@@ -539,14 +557,17 @@ const styles = StyleSheet.create({
   // Tax Invoice Header
   taxTitleContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
     marginVertical: 10,
+    paddingHorizontal: 8,
   },
   taxTitleLine: {
     fontSize: 22,
     fontWeight: '900',
     color: '#1E293B',
-    lineHeight: 26,
-    letterSpacing: 0.5,
+    lineHeight: 28,
+    letterSpacing: 1.2,
+    textAlign: 'center',
   },
 
   // Store Info Box

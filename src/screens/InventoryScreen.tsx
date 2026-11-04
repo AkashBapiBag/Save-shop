@@ -11,26 +11,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/AuthContext';
-import {
-  Product,
-  Batch,
-  ProductCreateRequest,
-  BatchReceiveSingleRequest,
-  BatchReceiveBulkRequest,
-} from '@/types/api';
+import { Product, Batch, ProductCreateRequest, ProductUpdateRequest, BatchReceiveSingleRequest, BatchReceiveBulkRequest } from '@/types/api';
 import { inventoryApi } from '@/services/api';
 import { Palette } from '@/theme/designSystem';
 import { useInventoryCatalog } from '@/hooks/inventory/useInventoryCatalog';
 import { InventoryProductCard } from '@/components/inventory/InventoryProductCard';
 import { CreateProductModal } from '@/components/inventory/CreateProductModal';
+import { EditProductModal } from '@/components/inventory/EditProductModal';
 import { ReceiveStockModal } from '@/components/inventory/ReceiveStockModal';
 import { BatchInspectionModal } from '@/components/inventory/BatchInspectionModal';
+import { StockTransferModal } from '@/components/inventory/StockTransferModal';
 import { InventorySkeleton } from '@/components/ui/Skeleton';
 import { useNetworkStatus } from '@/context/NetworkContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
 export const InventoryScreen: React.FC = () => {
-  const { activeStore } = useAuth();
+  const { activeStore, isAdmin } = useAuth();
   const { isOffline } = useNetworkStatus();
   const insets = useSafeAreaInsets();
   const safeTop = insets.top;
@@ -52,9 +48,24 @@ export const InventoryScreen: React.FC = () => {
     }
   }, [isOffline]);
 
+  // Reset modals and inspected batches when active store switches
+  useEffect(() => {
+    setSelectedProductForBatches(null);
+    setProductBatches([]);
+    setCreateProductModalVisible(false);
+    setEditProductModalVisible(false);
+    setProductToEdit(null);
+    setReceiveStockModalVisible(false);
+    setTransferModalVisible(false);
+  }, [activeStore?.store_id]);
+
   // Modals
   const [createProductModalVisible, setCreateProductModalVisible] = useState(false);
+  const [editProductModalVisible, setEditProductModalVisible] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
   const [receiveStockModalVisible, setReceiveStockModalVisible] = useState(false);
+  const [transferModalVisible, setTransferModalVisible] = useState(false);
   const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
   const [isSubmittingSingle, setIsSubmittingSingle] = useState(false);
   const [isSubmittingBulk, setIsSubmittingBulk] = useState(false);
@@ -63,6 +74,26 @@ export const InventoryScreen: React.FC = () => {
   const [selectedProductForBatches, setSelectedProductForBatches] = useState<Product | null>(null);
   const [productBatches, setProductBatches] = useState<Batch[]>([]);
   const [isLoadingBatches, setIsLoadingBatches] = useState(false);
+
+  // Edit Product Handlers
+  const handleOpenEditProduct = (prod: Product) => {
+    setProductToEdit(prod);
+    setEditProductModalVisible(true);
+  };
+
+  const handleUpdateProduct = async (productId: string, payload: ProductUpdateRequest) => {
+    setIsSubmittingEdit(true);
+    try {
+      await inventoryApi.updateProduct(productId, payload);
+      setEditProductModalVisible(false);
+      setProductToEdit(null);
+      void loadCatalog(false);
+    } catch (err: unknown) {
+      showErrorAlert(err, 'Update Error', 'Failed to update product.');
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
 
   // Create Product Submit Handler
   const handleCreateProduct = async (payload: ProductCreateRequest) => {
@@ -147,6 +178,17 @@ export const InventoryScreen: React.FC = () => {
         </View>
 
         <View style={styles.headerRightActions}>
+          {isAdmin && (
+            <TouchableOpacity
+              style={styles.transferBtn}
+              activeOpacity={0.8}
+              onPress={() => setTransferModalVisible(true)}
+            >
+              <Ionicons name="swap-horizontal" size={15} color="#FFFFFF" />
+              <Text style={styles.transferBtnText}>Transfer</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={styles.receiveBtn}
             activeOpacity={0.8}
@@ -216,6 +258,7 @@ export const InventoryScreen: React.FC = () => {
             <InventoryProductCard
               item={item}
               onPress={viewProductBatches}
+              onEdit={handleOpenEditProduct}
             />
           )}
         />
@@ -228,6 +271,7 @@ export const InventoryScreen: React.FC = () => {
         isLoading={isLoadingBatches}
         safeTop={safeTop}
         onClose={() => setSelectedProductForBatches(null)}
+        onEdit={handleOpenEditProduct}
       />
 
       {/* Register New Product Modal */}
@@ -237,6 +281,19 @@ export const InventoryScreen: React.FC = () => {
         isSubmitting={isSubmittingProduct}
         onClose={() => setCreateProductModalVisible(false)}
         onSubmit={handleCreateProduct}
+      />
+
+      {/* Edit Product Modal */}
+      <EditProductModal
+        visible={editProductModalVisible}
+        product={productToEdit}
+        existingCategoryStats={existingCategoryStats}
+        isSubmitting={isSubmittingEdit}
+        onClose={() => {
+          setEditProductModalVisible(false);
+          setProductToEdit(null);
+        }}
+        onSubmit={handleUpdateProduct}
       />
 
       {/* Receive Stock Inward Modal */}
@@ -250,6 +307,13 @@ export const InventoryScreen: React.FC = () => {
         onClose={() => setReceiveStockModalVisible(false)}
         onSubmitSingle={handleReceiveSingleStock}
         onSubmitBulk={handleReceiveBulkConsignment}
+      />
+
+      {/* Inter-Store Stock Transfer Modal */}
+      <StockTransferModal
+        visible={transferModalVisible}
+        onClose={() => setTransferModalVisible(false)}
+        onTransferSuccess={() => void loadCatalog(false)}
       />
     </View>
   );
@@ -291,6 +355,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     flexShrink: 0,
+  },
+  transferBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Palette.navyPrimary,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  transferBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+    marginLeft: 5,
   },
   receiveBtn: {
     flexDirection: 'row',

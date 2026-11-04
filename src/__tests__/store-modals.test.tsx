@@ -365,6 +365,45 @@ describe('components/inventory/CreateProductModal.tsx', () => {
     );
   });
 
+  it('fills product form with discount and cashback and submits', async () => {
+    const onSubmitMock = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <CreateProductModal
+        visible={true}
+        existingCategoryStats={[{ name: 'Beverages', count: 2 }]}
+        isSubmitting={false}
+        onClose={() => {}}
+        onSubmit={onSubmitMock}
+      />
+    );
+
+    const nameInput = screen.getByPlaceholderText('e.g. Organic Almond Milk');
+    const priceInputs = screen.getAllByPlaceholderText('0.00');
+    const discountInput = screen.getByPlaceholderText('e.g. 10 (for 10% off)');
+    const cashbackInput = screen.getByPlaceholderText('e.g. 5 (for 5% cashback)');
+    const saveBtn = screen.getByText('Save Product to Catalog');
+
+    await act(async () => {
+      fireEvent.change(nameInput, { target: { value: 'Green Tea' } });
+      fireEvent.change(priceInputs[0], { target: { value: '150' } });
+      fireEvent.change(discountInput, { target: { value: '10' } });
+      fireEvent.change(cashbackInput, { target: { value: '5' } });
+      fireEvent.click(saveBtn);
+    });
+
+    expect(onSubmitMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Green Tea',
+        selling_price: 150,
+        discount_value: 10,
+        discount_type: 'percentage',
+        cashback_value: 5,
+        cashback_type: 'percentage',
+      })
+    );
+  });
+
   it('validates empty name and zero price before submit', () => {
     const alertSpy = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
 

@@ -20,6 +20,7 @@ import { SignatureUploadModal } from '@/components/stores/SignatureUploadModal';
 import { CreateStoreModal } from '@/components/stores/CreateStoreModal';
 import { EditStoreModal } from '@/components/stores/EditStoreModal';
 import { StoreUsersModal } from '@/components/stores/StoreUsersModal';
+import { StockTransferModal } from '@/components/inventory/StockTransferModal';
 import { SuccessModal } from '@/components/ui/SuccessModal';
 import { StoreManagementSkeleton } from '@/components/ui/Skeleton';
 import { useNetworkStatus } from '@/context/NetworkContext';
@@ -34,6 +35,7 @@ export const StoreManagementScreen: React.FC = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [signatureModalVisible, setSignatureModalVisible] = useState(false);
   const [usersModalVisible, setUsersModalVisible] = useState(false);
+  const [transferModalVisible, setTransferModalVisible] = useState(false);
 
   const [selectedStoreForEdit, setSelectedStoreForEdit] = useState<Store | null>(null);
   const [targetStoreForSignature, setTargetStoreForSignature] = useState<Store | null>(null);
@@ -211,14 +213,26 @@ export const StoreManagementScreen: React.FC = () => {
         </View>
 
         {isAdmin && (
-          <TouchableOpacity
-            style={styles.createButton}
-            activeOpacity={0.8}
-            onPress={() => setCreateModalVisible(true)}
-          >
-            <Ionicons name="add" size={18} color="#FFFFFF" />
-            <Text style={styles.createButtonText}>Add Store</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {stores.length >= 2 && (
+              <TouchableOpacity
+                style={styles.transferButton}
+                activeOpacity={0.8}
+                onPress={() => setTransferModalVisible(true)}
+              >
+                <Ionicons name="swap-horizontal" size={16} color="#FFFFFF" />
+                <Text style={styles.createButtonText}>Transfer Stock</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.createButton}
+              activeOpacity={0.8}
+              onPress={() => setCreateModalVisible(true)}
+            >
+              <Ionicons name="add" size={18} color="#FFFFFF" />
+              <Text style={styles.createButtonText}>Add Store</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -356,6 +370,13 @@ export const StoreManagementScreen: React.FC = () => {
         onUpdated={refreshStores}
       />
 
+      {/* Inter-Store Stock Transfer Modal */}
+      <StockTransferModal
+        visible={transferModalVisible}
+        onClose={() => setTransferModalVisible(false)}
+        onTransferSuccess={refreshStores}
+      />
+
       {/* Modern In-App Success Feedback Modal (Desktop Web only) */}
       {Platform.OS === 'web' && successFeedback && (
         <SuccessModal
@@ -396,6 +417,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Palette.textSecondary,
     marginTop: 2,
+  },
+  transferButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Palette.navyPrimary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   createButton: {
     flexDirection: 'row',

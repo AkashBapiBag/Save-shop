@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PaymentMethod } from '@/types/api';
+import { PaymentMethod, CartItem } from '@/types/api';
 import { Palette, Shadows } from '@/theme/designSystem';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -23,6 +23,7 @@ export interface POSCheckoutModalProps {
   customerName: string;
   customerPhone: string;
   isProcessingCheckout: boolean;
+  cart?: CartItem[];
   onClose: () => void;
   onSelectPaymentMethod: (method: PaymentMethod) => void;
   onChangeReceivedAmount: (amount: string) => void;
@@ -41,6 +42,7 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
   customerName,
   customerPhone,
   isProcessingCheckout,
+  cart,
   onClose,
   onSelectPaymentMethod,
   onChangeReceivedAmount,
@@ -50,6 +52,7 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
 }) => {
   const parsedReceived = parseFloat(receivedAmount) || 0;
   const isCredit = paymentMethod === 'CREDIT';
+  const isWalkIn = customerName.toLowerCase().includes('walk-in');
 
   return (
     <Modal
@@ -79,6 +82,35 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                 <Text style={styles.checkoutAmountLabel}>Amount Payable:</Text>
                 <Text style={styles.checkoutAmountValue}>₹ {finalTotal.toFixed(2)}</Text>
               </View>
+
+              {/* Order Items & Quantities Summary */}
+              {cart && cart.length > 0 && (
+                <View style={styles.orderSummaryCard}>
+                  <Text style={styles.orderSummaryTitle}>
+                    Order Items ({cart.reduce((s, it) => s + it.quantity, 0)} {cart.reduce((s, it) => s + it.quantity, 0) === 1 ? 'item' : 'items'})
+                  </Text>
+                  {cart.map((item) => (
+                    <View key={item.product.product_id} style={styles.orderSummaryItemRow}>
+                      <View style={{ flex: 1, marginRight: 8 }}>
+                        <Text style={styles.orderSummaryItemName} numberOfLines={1}>
+                          {item.product.name}
+                        </Text>
+                        <Text style={styles.orderSummaryItemMeta}>
+                          ₹{item.unit_price.toFixed(2)} / {item.product.default_unit}
+                        </Text>
+                      </View>
+                      <View style={styles.orderSummaryQtyPill}>
+                        <Text style={styles.orderSummaryQtyText}>
+                          Qty: {item.quantity}
+                        </Text>
+                      </View>
+                      <Text style={styles.orderSummaryItemTotal}>
+                        ₹{(item.quantity * item.unit_price - (item.item_discount_amount || 0)).toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
 
               {/* Payment Method Selector */}
               <Text style={styles.sectionLabel}>Payment Method</Text>
@@ -161,10 +193,30 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                 </View>
               </View>
 
-              {/* Customer Details - Strictly Required */}
+              {/* Customer Details - Name required, Phone optional */}
               <Text style={styles.sectionLabel}>
-                Customer Details <Text style={{ color: Palette.rose }}>*</Text>
+                Customer Details
               </Text>
+
+              <View style={styles.customerPreviewBox}>
+                <View style={styles.customerPreviewLeft}>
+                  <View style={styles.customerAvatarSmall}>
+                    <Ionicons name="person" size={16} color={Palette.bluePrimary} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={styles.customerPreviewName} numberOfLines={1}>
+                      {customerName || 'Customer Name'}
+                    </Text>
+                    <Text style={styles.customerPreviewPhone}>
+                      {customerPhone
+                        ? `📞 ${customerPhone}`
+                        : isWalkIn
+                        ? 'Walk-in Customer (Mobile optional)'
+                        : 'No mobile registered (Optional)'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
 
               <View style={{ marginBottom: 10 }}>
                 <Input
@@ -181,16 +233,18 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
 
               <View style={{ marginBottom: 16 }}>
                 <Input
-                  placeholder="Contact Mobile Number *"
+                  placeholder="Contact Mobile Number (Optional)"
                   value={customerPhone}
                   onChangeText={onChangeCustomerPhone}
                   keyboardType="phone-pad"
                   icon={<Ionicons name="call-outline" size={16} color={Palette.textMuted} />}
                   containerStyle={{ marginBottom: 4 }}
                 />
-                {!customerPhone.trim() && (
-                  <Text style={styles.fieldErrorText}>* Mobile number is required</Text>
-                )}
+                <Text style={styles.optionalHelperText}>
+                  {isWalkIn
+                    ? '💡 Mobile number is optional for unknown walk-in customers'
+                    : '💡 Mobile number is optional for bill generation'}
+                </Text>
               </View>
 
               {/* Confirm Checkout Action */}
@@ -199,7 +253,7 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                 variant="primary"
                 size="lg"
                 loading={isProcessingCheckout}
-                disabled={!customerName.trim() || !customerPhone.trim() || isProcessingCheckout}
+                disabled={!customerName.trim() || isProcessingCheckout}
                 onPress={onConfirmCheckout}
               />
             </ScrollView>
@@ -344,5 +398,95 @@ const styles = StyleSheet.create({
     color: Palette.rose,
     marginTop: 2,
     marginLeft: 4,
+  },
+  customerPreviewBox: {
+    backgroundColor: Palette.surfaceLight,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+  },
+  customerPreviewLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  customerAvatarSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Palette.blueSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customerPreviewName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Palette.textPrimary,
+  },
+  customerPreviewPhone: {
+    fontSize: 12,
+    color: Palette.textSecondary,
+    marginTop: 1,
+  },
+  optionalHelperText: {
+    fontSize: 11,
+    color: Palette.textSecondary,
+    marginTop: 3,
+    marginLeft: 4,
+    fontStyle: 'italic',
+  },
+  orderSummaryCard: {
+    backgroundColor: Palette.surfaceLight,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+  },
+  orderSummaryTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Palette.textSecondary,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  orderSummaryItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: Palette.borderLight,
+  },
+  orderSummaryItemName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Palette.textPrimary,
+  },
+  orderSummaryItemMeta: {
+    fontSize: 11,
+    color: Palette.textSecondary,
+    marginTop: 1,
+  },
+  orderSummaryQtyPill: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  orderSummaryQtyText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Palette.bluePrimary,
+  },
+  orderSummaryItemTotal: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Palette.navyPrimary,
   },
 });

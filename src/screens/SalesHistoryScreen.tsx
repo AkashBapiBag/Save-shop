@@ -92,6 +92,12 @@ export const SalesHistoryScreen: React.FC = () => {
     };
   }, [searchQuery, selectedDateFilter, activeStoreId]);
 
+  // Reset open receipt modal when active store switches
+  useEffect(() => {
+    setModalVisible(false);
+    setSelectedReceipt(null);
+  }, [activeStoreId]);
+
   // Auto-reload sales when connection is restored
   useEffect(() => {
     if (!isOffline && transactions.length === 0 && !isLoading) {

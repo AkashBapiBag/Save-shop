@@ -15,6 +15,7 @@ import {
   inventoryApi,
   billingApi,
   dashboardApi,
+  transferApi,
 } from '@/services/api';
 import { buildReceiptHTML, printReceipt, shareReceiptPDF } from '@/services/pdfService';
 import * as Print from 'expo-print';
@@ -372,7 +373,7 @@ describe('services/pdfService.ts', () => {
     expect(html).toContain('John Doe');
     expect(html).toContain('Fresh Bread');
     expect(html).toContain('Seventy Two Rupees only');
-    expect(html).toContain('Cash<br/>back');
+    expect(html).toContain('S.I. Point');
   });
 
   it('buildReceiptHTML handles fallback values and credit payment', () => {
@@ -491,5 +492,85 @@ describe('services/pdfService.ts', () => {
     expect(html).toContain('Qty');
     expect(html).toContain('Discount (₹)');
     expect(html).toContain('Amount (₹)');
+  });
+
+  describe('transferApi', () => {
+    it('transferStock makes POST request to /api/v1/inventory/transfers', async () => {
+      const mockResult = {
+        transfer_id: 'trf-123',
+        transfer_number: 'TRF-00001',
+        source_store_id: 's1',
+        destination_store_id: 's2',
+        total_items: 1,
+        total_quantity: 10,
+        status: 'COMPLETED',
+      };
+
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify(mockResult),
+      } as Response);
+
+      const res = await transferApi.transferStock({
+        source_store_id: 's1',
+        destination_store_id: 's2',
+        items: [{ product_id: 'p1', quantity: 10 }],
+      });
+
+      expect(res).toEqual(mockResult);
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/inventory/transfers'),
+        expect.objectContaining({
+          method: 'POST',
+        })
+      );
+    });
+
+    it('listTransfers supports direction and store filtering', async () => {
+      const mockList = [
+        {
+          transfer_id: 'trf-123',
+          transfer_number: 'TRF-00001',
+          source_store_id: 's1',
+          destination_store_id: 's2',
+        },
+      ];
+
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify(mockList),
+      } as Response);
+
+      const res = await transferApi.listTransfers({
+        direction: 'outward',
+        store_id: 's1',
+        search: 'TRF-001',
+      });
+
+      expect(res).toEqual(mockList);
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/inventory/transfers?store_id=s1&direction=outward&search=TRF-001'),
+        expect.anything()
+      );
+    });
+
+    it('getTransfer retrieves specific transfer by ID', async () => {
+      const mockTransfer = {
+        transfer_id: 'trf-999',
+        transfer_number: 'TRF-00999',
+      };
+
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify(mockTransfer),
+      } as Response);
+
+      const res = await transferApi.getTransfer('trf-999');
+      expect(res).toEqual(mockTransfer);
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/inventory/transfers/trf-999'),
+        expect.anything()
+      );
+    });
   });
 });

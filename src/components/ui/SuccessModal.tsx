@@ -24,6 +24,8 @@ export interface SuccessModalProps {
   variant?: 'success' | 'info';
   details?: SuccessModalDetail[];
   primaryButtonText?: string;
+  secondaryButtonText?: string;
+  onSecondaryAction?: () => void;
   onClose: () => void;
 }
 
@@ -35,6 +37,8 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
   variant = 'success',
   details = [],
   primaryButtonText = 'Done',
+  secondaryButtonText,
+  onSecondaryAction,
   onClose,
 }) => {
   const isSuccess = variant === 'success';
@@ -96,14 +100,30 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
             </View>
           )}
 
-          {/* Action Button */}
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: primaryColor }]}
-            onPress={onClose}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.primaryButtonText}>{primaryButtonText}</Text>
-          </TouchableOpacity>
+          {/* Action Buttons */}
+          <View style={styles.actionButtonsRow}>
+            {secondaryButtonText && onSecondaryAction ? (
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={onSecondaryAction}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.secondaryButtonText}>{secondaryButtonText}</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            <TouchableOpacity
+              style={[
+                styles.primaryButton,
+                secondaryButtonText && onSecondaryAction ? styles.primaryButtonFlex : null,
+                { backgroundColor: primaryColor },
+              ]}
+              onPress={onClose}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.primaryButtonText}>{primaryButtonText}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -199,6 +219,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     maxWidth: '65%',
   },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 10,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  secondaryButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Palette.borderLight,
+    backgroundColor: Palette.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    color: Palette.navyPrimary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   primaryButton: {
     width: '100%',
     height: 48,
@@ -207,9 +249,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Shadows.sm,
   },
+  primaryButtonFlex: {
+    flex: 1,
+    width: 'auto',
+  },
   primaryButtonText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '700',
   },
 });

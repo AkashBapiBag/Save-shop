@@ -9,7 +9,7 @@ import { LoginScreen } from '@/screens/LoginScreen';
 import RootLayout from '@/app/_layout';
 import { AuthProvider } from '@/context/AuthContext';
 import { emitGlobalNetworkStatus } from '@/utils/networkEvents';
-import { inventoryApi, billingApi, dashboardApi } from '@/services/api';
+import { inventoryApi, billingApi, dashboardApi, customerApi } from '@/services/api';
 import { Product, Store, TransactionResponse, ReceiptResponse } from '@/types/api';
 
 const mockProduct: Product = {
@@ -160,6 +160,13 @@ vi.mock('@/services/api', async (importOriginal) => {
       updateStore: vi.fn(),
       uploadStoreSignature: vi.fn(),
     },
+    customerApi: {
+      listCustomers: vi.fn(),
+      createCustomer: vi.fn(),
+      getCustomer: vi.fn(),
+      getCustomerHistory: vi.fn(),
+      updateCustomer: vi.fn(),
+    },
     authApi: {
       login: vi.fn(),
       getMe: vi.fn(),
@@ -172,12 +179,25 @@ vi.mock('@/services/api', async (importOriginal) => {
 describe('screens/POSTerminalScreen.tsx', () => {
   beforeEach(() => {
     vi.mocked(inventoryApi.listProducts).mockResolvedValue([mockProduct]);
+    vi.mocked(customerApi.listCustomers).mockResolvedValue([
+      {
+        customer_id: 'cust-1',
+        store_id: 's-1',
+        name: 'Rohan Gupta',
+        phone: '9876543210',
+        created_at: '2026-01-01',
+        updated_at: '2026-01-01',
+        total_orders: 2,
+        total_spent: 500,
+        last_order_date: '2026-02-01',
+      },
+    ]);
     vi.mocked(billingApi.validateStock).mockResolvedValue({ is_valid: true, errors: [] });
     vi.mocked(billingApi.checkout).mockResolvedValue(mockTransaction);
     vi.mocked(billingApi.getReceipt).mockResolvedValue(mockReceipt);
   });
 
-  it('loads products, adds to cart, and proceeds to checkout', async () => {
+  it('loads customer directory, selects customer, adds to cart, and proceeds to checkout', async () => {
     await act(async () => {
       render(
         <AuthProvider>
@@ -186,8 +206,19 @@ describe('screens/POSTerminalScreen.tsx', () => {
       );
     });
 
+    // Step 1: Customer Directory is displayed
+    expect(screen.getByText('Billing Directory')).toBeDefined();
+    expect(screen.getByText(/Step 1: Choose Customer/i)).toBeDefined();
+
+    // Select customer to proceed to product catalog
+    const walkInBtn = await screen.findByLabelText(/Select walk-in customer for billing/i);
+    await act(async () => {
+      fireEvent.click(walkInBtn);
+    });
+
     expect(await screen.findByText('Farm Fresh Eggs')).toBeDefined();
     expect(screen.getByText('Billing Counter')).toBeDefined();
+    expect(screen.getByText('Walk-in Customer')).toBeDefined();
 
     // Add to cart
     await act(async () => {
@@ -244,6 +275,12 @@ describe('screens/POSTerminalScreen.tsx', () => {
         <POSTerminalScreen onNavigateToSales={() => {}} />
       </AuthProvider>
     );
+
+    // Select customer to enter catalog
+    const walkInBtn = await screen.findByLabelText(/Select walk-in customer for billing/i);
+    await act(async () => {
+      fireEvent.click(walkInBtn);
+    });
 
     expect(screen.getByTestId('pos-terminal-skeleton')).toBeDefined();
 

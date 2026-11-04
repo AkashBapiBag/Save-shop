@@ -26,17 +26,18 @@ export interface POSCartDrawerProps {
   cart: CartItem[];
   totalCartCount: number;
   calculation: POSCartCalculation;
-  subtotalDiscountType: 'amount' | 'percentage';
-  subtotalDiscountValue: string;
+  subtotalDiscountType?: 'amount' | 'percentage';
+  subtotalDiscountValue?: string;
   isValidatingStock: boolean;
   safeTop: number;
   onClose: () => void;
   onClearCart: () => void;
   onProceedToCheckout: () => void;
   onUpdateQuantity: (productId: string, delta: number) => void;
-  onUpdateItemCashback: (productId: string, type: 'amount' | 'percentage', valStr: string) => void;
-  onSetSubtotalDiscountType: (type: 'amount' | 'percentage') => void;
-  onSetSubtotalDiscountValue: (val: string) => void;
+  onSetQuantity?: (productId: string, quantity: number) => void;
+  onUpdateItemCashback?: (productId: string, type: 'amount' | 'percentage', valStr: string) => void;
+  onSetSubtotalDiscountType?: (type: 'amount' | 'percentage') => void;
+  onSetSubtotalDiscountValue?: (val: string) => void;
 }
 
 export const POSCartDrawer: React.FC<POSCartDrawerProps> = ({
@@ -44,17 +45,13 @@ export const POSCartDrawer: React.FC<POSCartDrawerProps> = ({
   cart,
   totalCartCount,
   calculation,
-  subtotalDiscountType,
-  subtotalDiscountValue,
   isValidatingStock,
   safeTop,
   onClose,
   onClearCart,
   onProceedToCheckout,
   onUpdateQuantity,
-  onUpdateItemCashback,
-  onSetSubtotalDiscountType,
-  onSetSubtotalDiscountValue,
+  onSetQuantity,
 }) => {
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -63,7 +60,7 @@ export const POSCartDrawer: React.FC<POSCartDrawerProps> = ({
         <View style={[styles.drawerHeader, { paddingTop: safeTop + 8 }]}>
           <View>
             <Text style={styles.drawerTitle}>Order Cart ({totalCartCount} items)</Text>
-            <Text style={styles.drawerSubtitle}>Review items & apply discounts</Text>
+            <Text style={styles.drawerSubtitle}>Review order items & stock discounts</Text>
           </View>
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="close-circle" size={26} color={Palette.textSecondary} />
@@ -75,6 +72,8 @@ export const POSCartDrawer: React.FC<POSCartDrawerProps> = ({
           {cart.map((item) => {
             const lineBase = item.quantity * item.unit_price;
             const maxStock = Number(item.product.total_current_stock || 0);
+            const discAmt = Number(item.item_discount_amount || 0);
+            const cbAmt = Number(item.cashback_amount || 0);
 
             return (
               <View key={item.product.product_id} style={styles.cartItemRow}>
@@ -85,53 +84,52 @@ export const POSCartDrawer: React.FC<POSCartDrawerProps> = ({
                   </Text>
                   <Text style={styles.cartStockAlertText}>Available Stock: {maxStock} {item.product.default_unit}</Text>
 
-                  {/* Product-level Cashback Setup */}
-                  <View style={styles.cashbackSection}>
-                    <View style={styles.cashbackLabelRow}>
-                      <Text style={styles.cashbackLabel}>Product Cashback:</Text>
-                      <View style={styles.toggleButtonGroup}>
-                        <TouchableOpacity
-                          style={[styles.toggleBtn, item.cashback_type === 'percentage' && styles.toggleBtnActive]}
-                          onPress={() => onUpdateItemCashback(item.product.product_id, 'percentage', String(item.cashback_value))}
-                        >
-                          <Text style={[styles.toggleBtnText, item.cashback_type === 'percentage' && styles.toggleBtnTextActive]}>%</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.toggleBtn, item.cashback_type === 'amount' && styles.toggleBtnActive]}
-                          onPress={() => onUpdateItemCashback(item.product.product_id, 'amount', String(item.cashback_value))}
-                        >
-                          <Text style={[styles.toggleBtnText, item.cashback_type === 'amount' && styles.toggleBtnTextActive]}>₹</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    <View style={styles.cashbackInputRow}>
-                      <TextInput
-                        style={styles.cashbackTextInput}
-                        placeholder="0"
-                        keyboardType="numeric"
-                        value={item.cashback_value ? String(item.cashback_value) : ''}
-                        onChangeText={(t) => onUpdateItemCashback(item.product.product_id, item.cashback_type, t)}
-                      />
-                      <Text style={styles.cashbackSummaryPreview}>
-                        = ₹ {Number(item.cashback_amount || 0).toFixed(2)} Cashback
+                  {/* Stock Product Discount Pill */}
+                  {discAmt > 0 && (
+                    <View style={styles.stockDiscountRow}>
+                      <Ionicons name="pricetag" size={12} color={Palette.emeraldDark} />
+                      <Text style={styles.stockDiscountText}>
+                        Stock Discount: -₹ {discAmt.toFixed(2)} ({item.item_discount_pct.toFixed(0)}% off)
                       </Text>
                     </View>
-                  </View>
+                  )}
+
+                  {/* Stock Product Automatic Cashback Pill */}
+                  {cbAmt > 0 && (
+                    <View style={styles.cashbackBadgeRow}>
+                      <Ionicons name="gift" size={12} color={Palette.bluePrimary} />
+                      <Text style={styles.cashbackBadgeText}>
+                        Cashback: +₹ {cbAmt.toFixed(2)} ({item.cashback_type === 'percentage' ? `${item.cashback_value}%` : `₹${item.cashback_value}`})
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
-                {/* Quantity Stepper */}
+                {/* Quantity Stepper & Direct Editable Input */}
                 <View style={styles.stepperContainer}>
                   <TouchableOpacity
                     style={styles.stepBtn}
                     onPress={() => onUpdateQuantity(item.product.product_id, -1)}
+                    accessibilityLabel="Decrease quantity"
                   >
                     <Ionicons name="remove" size={16} color={Palette.textPrimary} />
                   </TouchableOpacity>
-                  <Text style={styles.stepQty}>{item.quantity}</Text>
+                  <TextInput
+                    style={styles.stepQtyInput}
+                    keyboardType="numeric"
+                    value={String(item.quantity)}
+                    onChangeText={(val) => {
+                      const num = parseInt(val, 10);
+                      if (!isNaN(num) && num > 0 && onSetQuantity) {
+                        onSetQuantity(item.product.product_id, num);
+                      }
+                    }}
+                    selectTextOnFocus
+                  />
                   <TouchableOpacity
                     style={styles.stepBtn}
                     onPress={() => onUpdateQuantity(item.product.product_id, 1)}
+                    accessibilityLabel="Increase quantity"
                   >
                     <Ionicons name="add" size={16} color={Palette.textPrimary} />
                   </TouchableOpacity>
@@ -139,41 +137,6 @@ export const POSCartDrawer: React.FC<POSCartDrawerProps> = ({
               </View>
             );
           })}
-
-          {/* Subtotal Discount Control */}
-          <View style={styles.subtotalDiscountBox}>
-            <View style={styles.discountHeaderRow}>
-              <Text style={styles.subtotalDiscountTitle}>Order Subtotal Discount</Text>
-              <View style={styles.toggleButtonGroup}>
-                <TouchableOpacity
-                  style={[styles.toggleBtn, subtotalDiscountType === 'amount' && styles.toggleBtnActive]}
-                  onPress={() => onSetSubtotalDiscountType('amount')}
-                >
-                  <Text style={[styles.toggleBtnText, subtotalDiscountType === 'amount' && styles.toggleBtnTextActive]}>₹ Amount</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toggleBtn, subtotalDiscountType === 'percentage' && styles.toggleBtnActive]}
-                  onPress={() => onSetSubtotalDiscountType('percentage')}
-                >
-                  <Text style={[styles.toggleBtnText, subtotalDiscountType === 'percentage' && styles.toggleBtnTextActive]}>% Pct</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.discountInputRow}>
-              <TextInput
-                style={styles.discountTextInput}
-                placeholder="0"
-                keyboardType="numeric"
-                value={subtotalDiscountValue}
-                onChangeText={onSetSubtotalDiscountValue}
-              />
-              <Text style={styles.discountSummaryPreview}>
-                Discount: -₹ {calculation.discountAmount.toFixed(2)}
-                {subtotalDiscountType === 'percentage' ? ` (${calculation.discountPct}%)` : ''}
-              </Text>
-            </View>
-          </View>
 
           {/* Financial Summary */}
           <View style={styles.breakdownTable}>
@@ -282,65 +245,37 @@ const styles = StyleSheet.create({
     color: Palette.amber,
     marginTop: 2,
   },
-  cashbackSection: {
-    backgroundColor: Palette.surfaceLight,
-    padding: 8,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  cashbackLabelRow: {
+  stockDiscountRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
-  },
-  cashbackLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Palette.textSecondary,
-  },
-  toggleButtonGroup: {
-    flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
-    borderRadius: 6,
-    padding: 2,
-  },
-  toggleBtn: {
+    gap: 4,
+    backgroundColor: '#ECFDF5',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 4,
+    borderRadius: 6,
+    marginTop: 4,
+    alignSelf: 'flex-start',
   },
-  toggleBtnActive: {
-    backgroundColor: '#FFFFFF',
-  },
-  toggleBtnText: {
+  stockDiscountText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Palette.textSecondary,
+    color: Palette.emeraldDark,
   },
-  toggleBtnTextActive: {
-    color: Palette.bluePrimary,
-  },
-  cashbackInputRow: {
+  cashbackBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  cashbackTextInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: Palette.borderLight,
-    borderRadius: 6,
+    gap: 4,
+    backgroundColor: '#EFF6FF',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    fontSize: 12,
-    fontWeight: '700',
-    width: 70,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginTop: 4,
+    alignSelf: 'flex-start',
   },
-  cashbackSummaryPreview: {
+  cashbackBadgeText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Palette.bluePrimary,
-    marginLeft: 8,
   },
   stepperContainer: {
     flexDirection: 'row',
@@ -364,6 +299,20 @@ const styles = StyleSheet.create({
     color: Palette.textPrimary,
     minWidth: 18,
     textAlign: 'center',
+  },
+  stepQtyInput: {
+    marginHorizontal: 4,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Palette.textPrimary,
+    minWidth: 32,
+    textAlign: 'center',
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
   },
   subtotalDiscountBox: {
     backgroundColor: '#FFFFFF',

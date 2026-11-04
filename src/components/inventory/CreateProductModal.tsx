@@ -60,6 +60,10 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
   const [sellingPrice, setSellingPrice] = useState('');
   const [costPrice, setCostPrice] = useState('');
   const [minThreshold, setMinThreshold] = useState('10');
+  const [discountValue, setDiscountValue] = useState('');
+  const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('percentage');
+  const [cashbackValue, setCashbackValue] = useState('');
+  const [cashbackType, setCashbackType] = useState<'amount' | 'percentage'>('percentage');
 
   const handleResetForm = () => {
     setName('');
@@ -70,6 +74,10 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
     setSellingPrice('');
     setCostPrice('');
     setMinThreshold('10');
+    setDiscountValue('');
+    setDiscountType('percentage');
+    setCashbackValue('');
+    setCashbackType('percentage');
   };
 
   const handleSave = async () => {
@@ -91,6 +99,10 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
       selling_price: Number(sellingPrice),
       cost_price: Number(costPrice) || 0,
       min_stock_alert_threshold: Number(minThreshold) || 10,
+      discount_value: Number(discountValue) || 0,
+      discount_type: discountType,
+      cashback_value: Number(cashbackValue) || 0,
+      cashback_type: cashbackType,
     });
 
     handleResetForm();
@@ -171,6 +183,68 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
                 onChangeText={setMinThreshold}
                 keyboardType="numeric"
               />
+
+              {/* Product Discount */}
+              <View style={styles.discountSection}>
+                <View style={styles.discountLabelRow}>
+                  <Text style={styles.inputLabel}>Product Discount (Optional)</Text>
+                  <View style={styles.toggleButtonGroup}>
+                    <TouchableOpacity
+                      style={[styles.toggleBtn, discountType === 'percentage' && styles.toggleBtnActive]}
+                      onPress={() => setDiscountType('percentage')}
+                    >
+                      <Text style={[styles.toggleBtnText, discountType === 'percentage' && styles.toggleBtnTextActive]}>
+                        %
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.toggleBtn, discountType === 'amount' && styles.toggleBtnActive]}
+                      onPress={() => setDiscountType('amount')}
+                    >
+                      <Text style={[styles.toggleBtnText, discountType === 'amount' && styles.toggleBtnTextActive]}>
+                        ₹
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <Input
+                  placeholder={discountType === 'percentage' ? 'e.g. 10 (for 10% off)' : 'e.g. 20 (for ₹20 off)'}
+                  value={discountValue}
+                  onChangeText={setDiscountValue}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              {/* Product Cashback */}
+              <View style={styles.discountSection}>
+                <View style={styles.discountLabelRow}>
+                  <Text style={styles.inputLabel}>Product Cashback (Optional)</Text>
+                  <View style={styles.toggleButtonGroup}>
+                    <TouchableOpacity
+                      style={[styles.toggleBtn, cashbackType === 'percentage' && styles.toggleBtnActive]}
+                      onPress={() => setCashbackType('percentage')}
+                    >
+                      <Text style={[styles.toggleBtnText, cashbackType === 'percentage' && styles.toggleBtnTextActive]}>
+                        %
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.toggleBtn, cashbackType === 'amount' && styles.toggleBtnActive]}
+                      onPress={() => setCashbackType('amount')}
+                    >
+                      <Text style={[styles.toggleBtnText, cashbackType === 'amount' && styles.toggleBtnTextActive]}>
+                        ₹
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <Input
+                  placeholder={cashbackType === 'percentage' ? 'e.g. 5 (for 5% cashback)' : 'e.g. 10 (for ₹10 cashback)'}
+                  value={cashbackValue}
+                  onChangeText={setCashbackValue}
+                  keyboardType="numeric"
+                />
+              </View>
             </ScrollView>
 
             <Button
@@ -260,5 +334,39 @@ const styles = StyleSheet.create({
   unitChipTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  discountSection: {
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  discountLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  toggleButtonGroup: {
+    flexDirection: 'row',
+    backgroundColor: Palette.surfaceLight,
+    borderRadius: 8,
+    padding: 2,
+    borderWidth: 1,
+    borderColor: Palette.borderLight,
+  },
+  toggleBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  toggleBtnActive: {
+    backgroundColor: Palette.bluePrimary,
+  },
+  toggleBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Palette.textSecondary,
+  },
+  toggleBtnTextActive: {
+    color: '#FFFFFF',
   },
 });

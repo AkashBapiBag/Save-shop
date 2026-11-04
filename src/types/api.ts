@@ -180,6 +180,10 @@ export interface Product {
   cost_price: number | string;
   min_stock_alert_threshold: number | string;
   barcode?: string | null;
+  discount_value?: number | string;
+  discount_type?: 'amount' | 'percentage';
+  cashback_value?: number | string;
+  cashback_type?: 'amount' | 'percentage';
   total_current_stock: number | string;
   is_active: boolean;
   created_at: string;
@@ -197,6 +201,10 @@ export interface ProductCreateRequest {
   cost_price?: number | string;
   min_stock_alert_threshold?: number | string;
   barcode?: string | null;
+  discount_value?: number | string;
+  discount_type?: 'amount' | 'percentage';
+  cashback_value?: number | string;
+  cashback_type?: 'amount' | 'percentage';
 }
 
 export type ProductUpdateRequest = Partial<ProductCreateRequest & { is_active?: boolean }>;
@@ -242,6 +250,7 @@ export interface CartItem {
   quantity: number;
   unit_price: number;
   item_discount_pct: number;
+  item_discount_amount?: number;
   category_discount_pct: number;
   cashback_type: 'amount' | 'percentage';
   cashback_value: number;
@@ -265,8 +274,58 @@ export interface POSTransactionCreateItem {
   cashback_pct?: string | number;
 }
 
+export interface Customer {
+  customer_id: string;
+  store_id: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  total_orders: number;
+  total_spent: number | string;
+  last_order_date?: string | null;
+  is_multi_store?: boolean;
+  store_ids?: string[];
+}
+
+export interface CustomerCreateRequest {
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
+}
+
+export interface CustomerTransactionHistoryItem {
+  transaction_id: string;
+  invoice_number: string;
+  invoice_seq?: number | null;
+  store_id?: string | null;
+  store_name?: string | null;
+  final_total: number | string;
+  received_amount: number | string;
+  balance_amount: number | string;
+  payment_method: string;
+  payment_status: string;
+  items_count: number;
+  created_at: string;
+}
+
+export interface CustomerHistoryResponse {
+  customer: Customer;
+  transactions: CustomerTransactionHistoryItem[];
+  total_orders: number;
+  total_spent: number | string;
+  all_stores_orders?: number | null;
+  all_stores_spent?: number | string | null;
+}
+
 export interface POSTransactionCreate {
   store_id?: string;
+  customer_id?: string | null;
   items: POSTransactionCreateItem[];
   category_discounts?: CategoryDiscountRule[];
   total_discount_pct?: string | number;
@@ -279,6 +338,7 @@ export interface POSTransactionCreate {
   customer_email?: string;
   notes?: string;
   client_offline_id?: string;
+  allow_negative_stock?: boolean;
 }
 
 export interface BatchAllocation {
@@ -316,6 +376,7 @@ export interface TransactionResponse {
   invoice_seq?: number | null;
   cashier_id?: string | null;
   cashier_name?: string | null;
+  customer_id?: string | null;
   customer_name?: string | null;
   customer_phone?: string | null;
   customer_email?: string | null;
@@ -360,6 +421,7 @@ export interface ReceiptResponse {
   invoice_number: string;
   invoice_seq?: number | null;
   transaction_id: string;
+  customer_id?: string | null;
   date: string;
   cashier_name?: string;
   customer_name?: string;
@@ -384,6 +446,11 @@ export interface ReceiptResponse {
 export interface StockValidationItem {
   product_id: string;
   quantity: number | string;
+}
+
+export interface StockValidationRequest {
+  items: StockValidationItem[];
+  allow_negative?: boolean;
 }
 
 export interface StockValidationItemError {
@@ -481,6 +548,55 @@ export interface TransactionListParams {
   date_filter?: string;
   start_date?: string;
   end_date?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface StockTransferItemCreate {
+  product_id: string;
+  quantity: number | string;
+}
+
+export interface StockTransferCreateRequest {
+  source_store_id: string;
+  destination_store_id: string;
+  notes?: string | null;
+  items: StockTransferItemCreate[];
+}
+
+export interface StockTransferItem {
+  item_id: string;
+  transfer_id: string;
+  source_product_id?: string | null;
+  destination_product_id?: string | null;
+  product_name: string;
+  category: string;
+  unit: string;
+  quantity: number | string;
+  auto_created_product: boolean;
+}
+
+export interface StockTransfer {
+  transfer_id: string;
+  transfer_number: string;
+  source_store_id: string;
+  source_store_name: string;
+  destination_store_id: string;
+  destination_store_name: string;
+  created_by_user_id?: string | null;
+  transferred_by_name: string;
+  status: string;
+  notes?: string | null;
+  total_items: number;
+  total_quantity: number | string;
+  created_at: string;
+  items: StockTransferItem[];
+}
+
+export interface StockTransferListParams {
+  store_id?: string;
+  direction?: 'all' | 'outward' | 'inward';
+  search?: string;
   limit?: number;
   offset?: number;
 }

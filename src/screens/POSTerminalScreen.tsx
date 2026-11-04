@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/AuthContext';
-import { Product, PaymentMethod, ReceiptResponse, POSTransactionCreate } from '@/types/api';
+import { Product, PaymentMethod, ReceiptResponse, POSTransactionCreate, Customer } from '@/types/api';
 import { inventoryApi, billingApi } from '@/services/api';
 import { Palette } from '@/theme/designSystem';
 import { TaxInvoiceModal } from '@/components/TaxInvoiceModal';
@@ -24,6 +24,9 @@ import { POSCategoryBar } from '@/components/pos/POSCategoryBar';
 import { POSCartSummaryBar } from '@/components/pos/POSCartSummaryBar';
 import { POSCartDrawer } from '@/components/pos/POSCartDrawer';
 import { POSCheckoutModal } from '@/components/pos/POSCheckoutModal';
+import { POSCustomerSelectView } from '@/components/pos/POSCustomerSelectView';
+import { POSActiveCustomerBanner } from '@/components/pos/POSActiveCustomerBanner';
+import { CustomerHistoryModal } from '@/components/pos/CustomerHistoryModal';
 import { useNetworkStatus } from '@/context/NetworkContext';
 import { showErrorAlert, logError } from '@/utils/errorHandler';
 
@@ -50,6 +53,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
     setCart,
     addToCart,
     updateQuantity,
+    setQuantity,
     updateItemCashback,
     clearCart,
     subtotalDiscountType,
@@ -59,6 +63,11 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
     calculation,
     totalCartCount,
   } = useCart();
+
+  // Customer Selection & History State
+  const [activeCustomer, setActiveCustomer] = useState<Customer | null>(null);
+  const [historyCustomer, setHistoryCustomer] = useState<Customer | null>(null);
+  const [historyModalVisible, setHistoryModalVisible] = useState<boolean>(false);
 
   // Modals
   const [cartDrawerVisible, setCartDrawerVisible] = useState<boolean>(false);
@@ -73,10 +82,12 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
   const [receiptData, setReceiptData] = useState<ReceiptResponse | null>(null);
   const [taxInvoiceVisible, setTaxInvoiceVisible] = useState<boolean>(false);
 
+  const activeStoreId = activeStore?.store_id;
+
   const loadProducts = useCallback(async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
     try {
-      const data = await inventoryApi.listProducts();
+      const data = await inventoryApi.listProducts(activeStoreId ? { store_id: activeStoreId } : undefined);
       setProducts(data);
       const uniqueCats = Array.from(new Set(data.map((p) => p.category || 'General')));
       setCategories(['All', ...uniqueCats]);
@@ -85,9 +96,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const activeStoreId = activeStore?.store_id;
+  }, [activeStoreId]);
 
   // Track active store changes during render to reset filters and modals
   const [prevStoreId, setPrevStoreId] = useState(activeStoreId);
@@ -97,13 +106,22 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
     setSearchQuery('');
     setCartDrawerVisible(false);
     setCheckoutModalVisible(false);
+    setActiveCustomer(null);
+    setHistoryModalVisible(false);
+    setTaxInvoiceVisible(false);
+    setReceiptData(null);
   }
+
+  // Clear cart whenever active store changes
+  useEffect(() => {
+    clearCart();
+  }, [activeStoreId]);
 
   // Load products on mount or store tenant change
   useEffect(() => {
     let isMounted = true;
     inventoryApi
-      .listProducts()
+      .listProducts(activeStoreId ? { store_id: activeStoreId } : undefined)
       .then((data) => {
         if (isMounted) {
           setProducts(data);
@@ -194,7 +212,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
     }
   };
 
-  // Execute POS Checkout with Required Customer Name & Phone Number
+  // Execute POS Checkout with Selected Customer & Optional Mobile Number
   const handleCheckout = async () => {
     if (cart.length === 0) return;
 
@@ -202,34 +220,37 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
       Alert.alert('Required Field', 'Please enter Customer Name.');
       return;
     }
-    if (!customerPhone.trim()) {
-      Alert.alert('Required Field', 'Please enter Customer Phone Number.');
-      return;
-    }
-    const cleanPhone = customerPhone.trim().replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      Alert.alert('Invalid Phone Number', 'Please enter a valid 10-digit mobile number.');
-      return;
+
+    const trimmedPhone = customerPhone.trim();
+    if (trimmedPhone) {
+      const cleanPhone = trimmedPhone.replace(/\D/g, '');
+      if (cleanPhone.length < 10) {
+        Alert.alert('Invalid Phone Number', 'Please enter a valid 10-digit mobile number, or leave it blank.');
+        return;
+      }
     }
 
     setIsProcessingCheckout(true);
 
     const posPayload: POSTransactionCreate = {
       store_id: activeStore?.store_id,
+      customer_id: activeCustomer?.customer_id === 'guest' ? undefined : activeCustomer?.customer_id,
       items: cart.map((item) => ({
         product_id: item.product.product_id,
         quantity: item.quantity,
         unit_price_override: item.unit_price,
+        item_discount_pct: item.item_discount_pct,
         cashback_amount: item.cashback_amount,
         cashback_pct: item.cashback_type === 'percentage' ? item.cashback_value : 0,
       })),
-      discount_type: subtotalDiscountType,
-      total_discount_amount: calculation.discountAmount,
-      total_discount_pct: calculation.discountPct,
+      discount_type: 'amount',
+      total_discount_amount: 0,
+      total_discount_pct: 0,
       received_amount: paymentMethod === 'CREDIT' ? 0 : (parseFloat(receivedAmount) || 0),
       payment_method: paymentMethod,
       customer_name: customerName.trim(),
-      customer_phone: customerPhone.trim(),
+      customer_phone: trimmedPhone || undefined,
+      allow_negative_stock: true,
     };
 
     try {
@@ -253,11 +274,84 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
     }
   };
 
+  const handleChangeCustomer = () => {
+    if (cart.length > 0) {
+      Alert.alert(
+        'Switch Customer?',
+        'You have items in your cart. Switching customer will keep your cart items for the new customer. Do you want to continue?',
+        [
+          { text: 'Keep Current', style: 'cancel' },
+          {
+            text: 'Switch Customer',
+            onPress: () => {
+              setActiveCustomer(null);
+            },
+          },
+        ]
+      );
+    } else {
+      setActiveCustomer(null);
+    }
+  };
+
+  // Step 1: Customer Selection View (Phone Book Directory)
+  if (!activeCustomer) {
+    return (
+      <View style={styles.container}>
+        <POSCustomerSelectView
+          onSelectCustomer={(cust) => {
+            setActiveCustomer(cust);
+            setCustomerName(cust.name);
+            setCustomerPhone(cust.phone || '');
+          }}
+          onViewCustomerHistory={(cust) => {
+            setHistoryCustomer(cust);
+            setHistoryModalVisible(true);
+          }}
+          onNavigateToSales={onNavigateToSales}
+        />
+
+        {/* Customer History Modal */}
+        <CustomerHistoryModal
+          visible={historyModalVisible}
+          customer={historyCustomer}
+          onClose={() => {
+            setHistoryModalVisible(false);
+            setHistoryCustomer(null);
+          }}
+          onViewReceipt={async (txId) => {
+            try {
+              const r = await billingApi.getReceipt(txId);
+              setReceiptData(r);
+              setTaxInvoiceVisible(true);
+            } catch (e) {
+              showErrorAlert(e, 'Receipt Error', 'Could not load receipt.');
+            }
+          }}
+        />
+
+        {/* Tax Invoice Modal */}
+        <TaxInvoiceModal
+          visible={taxInvoiceVisible}
+          receipt={receiptData}
+          onClose={() => setTaxInvoiceVisible(false)}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Top Billing Header Bar */}
       <View style={styles.topHeaderBar}>
         <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.backToCustomersBtn}
+            onPress={handleChangeCustomer}
+            accessibilityLabel="Back to customer directory"
+          >
+            <Ionicons name="arrow-back" size={20} color={Palette.bluePrimary} />
+          </TouchableOpacity>
           <View style={styles.headerIconCircle}>
             <Ionicons name="receipt-outline" size={18} color={Palette.bluePrimary} />
           </View>
@@ -295,6 +389,16 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
           ) : null}
         </View>
       </View>
+
+      {/* Active Customer Banner */}
+      <POSActiveCustomerBanner
+        customer={activeCustomer}
+        onChangeCustomer={handleChangeCustomer}
+        onViewHistory={() => {
+          setHistoryCustomer(activeCustomer);
+          setHistoryModalVisible(true);
+        }}
+      />
 
       {/* Modern Search Bar */}
       <View style={styles.searchBarSection}>
@@ -415,6 +519,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
         onClearCart={clearCart}
         onProceedToCheckout={handleProceedToCheckout}
         onUpdateQuantity={updateQuantity}
+        onSetQuantity={setQuantity}
         onUpdateItemCashback={updateItemCashback}
         onSetSubtotalDiscountType={setSubtotalDiscountType}
         onSetSubtotalDiscountValue={setSubtotalDiscountValue}
@@ -423,6 +528,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
       {/* Checkout Details Modal */}
       <POSCheckoutModal
         visible={checkoutModalVisible}
+        cart={cart}
         finalTotal={calculation.finalTotal}
         paymentMethod={paymentMethod}
         receivedAmount={receivedAmount}
@@ -437,11 +543,33 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
         onConfirmCheckout={handleCheckout}
       />
 
+      {/* Customer Purchase History Modal */}
+      <CustomerHistoryModal
+        visible={historyModalVisible}
+        customer={historyCustomer}
+        onClose={() => {
+          setHistoryModalVisible(false);
+          setHistoryCustomer(null);
+        }}
+        onViewReceipt={async (txId) => {
+          try {
+            const r = await billingApi.getReceipt(txId);
+            setReceiptData(r);
+            setTaxInvoiceVisible(true);
+          } catch (e) {
+            showErrorAlert(e, 'Receipt Error', 'Could not load receipt.');
+          }
+        }}
+      />
+
       {/* Tax Invoice Modal */}
       <TaxInvoiceModal
         visible={taxInvoiceVisible}
         receipt={receiptData}
-        onClose={() => setTaxInvoiceVisible(false)}
+        onClose={() => {
+          setTaxInvoiceVisible(false);
+          setActiveCustomer(null);
+        }}
       />
     </View>
   );
@@ -468,6 +596,15 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     marginRight: 10,
+  },
+  backToCustomersBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: Palette.blueSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
   },
   headerIconCircle: {
     width: 34,

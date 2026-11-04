@@ -8,15 +8,19 @@ import { Badge } from '@/components/ui/Badge';
 export interface InventoryProductCardProps {
   item: Product;
   onPress: (product: Product) => void;
+  onEdit?: (product: Product) => void;
 }
 
 export const InventoryProductCard: React.FC<InventoryProductCardProps> = ({
   item,
   onPress,
+  onEdit,
 }) => {
   const stock = Number(item.total_current_stock);
   const isOut = stock <= 0;
   const isLow = !isOut && stock <= Number(item.min_stock_alert_threshold);
+  const discountVal = Number(item.discount_value || 0);
+  const cashbackVal = Number(item.cashback_value || 0);
 
   return (
     <TouchableOpacity
@@ -30,11 +34,27 @@ export const InventoryProductCard: React.FC<InventoryProductCardProps> = ({
             {item.name}
           </Text>
           <Badge
-            label={isOut ? 'OUT OF STOCK' : isLow ? 'LOW STOCK' : 'IN STOCK'}
+            label={stock < 0 ? 'NEGATIVE STOCK' : isOut ? 'OUT OF STOCK' : isLow ? 'LOW STOCK' : 'IN STOCK'}
             variant={isOut ? 'danger' : isLow ? 'warning' : 'success'}
             size="sm"
             style={{ marginLeft: 6, flexShrink: 0 }}
           />
+          {discountVal > 0 && (
+            <Badge
+              label={item.discount_type === 'amount' ? `₹${discountVal} OFF` : `${discountVal}% OFF`}
+              variant="primary"
+              size="sm"
+              style={{ marginLeft: 6, flexShrink: 0 }}
+            />
+          )}
+          {cashbackVal > 0 && (
+            <Badge
+              label={item.cashback_type === 'amount' ? `+₹${cashbackVal} CB` : `+${cashbackVal}% CB`}
+              variant="success"
+              size="sm"
+              style={{ marginLeft: 6, flexShrink: 0 }}
+            />
+          )}
         </View>
         <Text style={styles.productMeta} numberOfLines={1}>
           {item.category} • Min Stock Alert: {item.min_stock_alert_threshold} {item.default_unit}
@@ -47,6 +67,16 @@ export const InventoryProductCard: React.FC<InventoryProductCardProps> = ({
           {stock} {item.default_unit}
         </Text>
       </View>
+
+      {onEdit && (
+        <TouchableOpacity
+          style={styles.editIconButton}
+          onPress={() => onEdit(item)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="pencil" size={16} color={Palette.bluePrimary} />
+        </TouchableOpacity>
+      )}
 
       <Ionicons name="chevron-forward" size={16} color={Palette.textMuted} style={{ marginLeft: 6, flexShrink: 0 }} />
     </TouchableOpacity>
@@ -95,5 +125,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Palette.emeraldDark,
     marginTop: 2,
+  },
+  editIconButton: {
+    padding: 6,
+    marginLeft: 6,
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
   },
 });

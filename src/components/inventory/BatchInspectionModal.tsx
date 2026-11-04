@@ -20,6 +20,7 @@ export interface BatchInspectionModalProps {
   isLoading: boolean;
   safeTop: number;
   onClose: () => void;
+  onEdit?: (product: Product) => void;
 }
 
 export const BatchInspectionModal: React.FC<BatchInspectionModalProps> = ({
@@ -28,8 +29,12 @@ export const BatchInspectionModal: React.FC<BatchInspectionModalProps> = ({
   isLoading,
   safeTop,
   onClose,
+  onEdit,
 }) => {
   if (!product) return null;
+
+  const discountVal = Number(product.discount_value || 0);
+  const cashbackVal = Number(product.cashback_value || 0);
 
   return (
     <Modal
@@ -42,11 +47,26 @@ export const BatchInspectionModal: React.FC<BatchInspectionModalProps> = ({
           <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
             <Text style={styles.drawerTitle} numberOfLines={1}>{product.name}</Text>
             <Text style={styles.drawerSubtitle} numberOfLines={1}>
-              Category: {product.category} • Total Stock: {product.total_current_stock}{' '}
+              Category: {product.category} • Stock: {product.total_current_stock}{' '}
               {product.default_unit}
+              {discountVal > 0 ? ` • Disc: ${product.discount_type === 'amount' ? `₹${discountVal}` : `${discountVal}%`}` : ''}
+              {cashbackVal > 0 ? ` • CB: ${product.cashback_type === 'amount' ? `₹${cashbackVal}` : `${cashbackVal}%`}` : ''}
             </Text>
           </View>
-          <TouchableOpacity onPress={onClose} style={{ flexShrink: 0 }}>
+          {onEdit && (
+            <TouchableOpacity
+              onPress={() => {
+                onClose();
+                onEdit(product);
+              }}
+              style={styles.editProductHeaderBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="pencil" size={16} color="#FFFFFF" />
+              <Text style={styles.editProductHeaderText}>Edit</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={onClose} style={{ flexShrink: 0, marginLeft: 8 }}>
             <Ionicons name="close-circle" size={26} color={Palette.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -207,5 +227,20 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     flexShrink: 1,
     marginLeft: 8,
+  },
+  editProductHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Palette.bluePrimary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    flexShrink: 0,
+  },
+  editProductHeaderText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

@@ -32,6 +32,12 @@ import {
   StoreMembersOverview,
   AddStoreOperatorRequest,
   AddStoreOperatorResponse,
+  Customer,
+  CustomerCreateRequest,
+  CustomerHistoryResponse,
+  StockTransfer,
+  StockTransferCreateRequest,
+  StockTransferListParams,
 } from '@/types/api';
 
 export const isLocalEnvironment = (): boolean => {
@@ -444,10 +450,11 @@ export const storeApi = {
 // Inventory Endpoints
 // -------------------------------------------------------------
 export const inventoryApi = {
-  listProducts: async (params?: { category?: string; search?: string }): Promise<Product[]> => {
+  listProducts: async (params?: { category?: string; search?: string; store_id?: string }): Promise<Product[]> => {
     const q = new URLSearchParams();
     if (params?.category) q.append('category', params.category);
     if (params?.search) q.append('search', params.search);
+    if (params?.store_id) q.append('store_id', params.store_id);
     const qs = q.toString();
     return apiRequest<Product[]>(`/api/v1/inventory/products${qs ? `?${qs}` : ''}`);
   },
@@ -498,13 +505,54 @@ export const inventoryApi = {
 };
 
 // -------------------------------------------------------------
+// Customers Directory (Phone Book) Endpoints
+// -------------------------------------------------------------
+export const customerApi = {
+  listCustomers: async (params?: { search?: string; sort_by?: string; limit?: number; offset?: number }): Promise<Customer[]> => {
+    const q = new URLSearchParams();
+    if (params?.search) q.append('search', params.search);
+    if (params?.sort_by) q.append('sort_by', params.sort_by);
+    if (params?.limit) q.append('limit', String(params.limit));
+    if (params?.offset) q.append('offset', String(params.offset));
+    const qs = q.toString();
+    return apiRequest<Customer[]>(`/api/v1/customers${qs ? `?${qs}` : ''}`);
+  },
+
+  createCustomer: async (payload: CustomerCreateRequest): Promise<Customer> => {
+    return apiRequest<Customer>('/api/v1/customers', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getCustomer: async (customerId: string): Promise<Customer> => {
+    return apiRequest<Customer>(`/api/v1/customers/${customerId}`);
+  },
+
+  getCustomerHistory: async (customerId: string, limit = 50, offset = 0): Promise<CustomerHistoryResponse> => {
+    const q = new URLSearchParams();
+    if (limit) q.append('limit', String(limit));
+    if (offset) q.append('offset', String(offset));
+    const qs = q.toString();
+    return apiRequest<CustomerHistoryResponse>(`/api/v1/customers/${customerId}/history${qs ? `?${qs}` : ''}`);
+  },
+
+  updateCustomer: async (customerId: string, payload: Partial<CustomerCreateRequest>): Promise<Customer> => {
+    return apiRequest<Customer>(`/api/v1/customers/${customerId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+};
+
+// -------------------------------------------------------------
 // Billing & POS Endpoints
 // -------------------------------------------------------------
 export const billingApi = {
-  validateStock: async (items: StockValidationItem[]): Promise<StockValidationResponse> => {
+  validateStock: async (items: StockValidationItem[], allowNegative = true): Promise<StockValidationResponse> => {
     return apiRequest<StockValidationResponse>('/api/v1/billing/validate-stock', {
       method: 'POST',
-      body: JSON.stringify({ items }),
+      body: JSON.stringify({ items, allow_negative: allowNegative }),
     });
   },
 
@@ -558,3 +606,31 @@ export const dashboardApi = {
     return apiRequest<InventoryStatusResponse>('/api/v1/dashboard/inventory-status');
   },
 };
+
+// -------------------------------------------------------------
+// Stock Transfer Endpoints
+// -------------------------------------------------------------
+export const transferApi = {
+  transferStock: async (payload: StockTransferCreateRequest): Promise<StockTransfer> => {
+    return apiRequest<StockTransfer>('/api/v1/inventory/transfers', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  listTransfers: async (params?: StockTransferListParams): Promise<StockTransfer[]> => {
+    const q = new URLSearchParams();
+    if (params?.store_id) q.append('store_id', params.store_id);
+    if (params?.direction) q.append('direction', params.direction);
+    if (params?.search) q.append('search', params.search);
+    if (params?.limit) q.append('limit', String(params.limit));
+    if (params?.offset) q.append('offset', String(params.offset));
+    const qs = q.toString();
+    return apiRequest<StockTransfer[]>(`/api/v1/inventory/transfers${qs ? `?${qs}` : ''}`);
+  },
+
+  getTransfer: async (transferId: string): Promise<StockTransfer> => {
+    return apiRequest<StockTransfer>(`/api/v1/inventory/transfers/${transferId}`);
+  },
+};
+

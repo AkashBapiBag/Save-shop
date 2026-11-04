@@ -176,7 +176,8 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
             color: #2D3748;
             margin-bottom: 12px;
             line-height: 1.2;
-            letter-spacing: 0.5px;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
             page-break-inside: avoid;
             break-inside: avoid;
           }
@@ -433,7 +434,7 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
         <div class="invoice-box">
           <!-- Centered Tax Invoice Title -->
           <div class="tax-header">
-            Tax<br/>Invoice
+            TAX INVOICE
           </div>
 
           <!-- Store Info Box -->
@@ -486,7 +487,7 @@ export function buildReceiptHTML(receipt: ReceiptResponse): string {
               <tr>
                 <th>#</th>
                 <th style="text-align: left; padding-left: 6px;">Item Name</th>
-                <th>Cash<br/>back</th>
+                <th>S.I. Point</th>
                 <th>Qty</th>
                 <th>Unit</th>
                 <th style="text-align: right; padding-right: 6px;">Price/<br/>Unit (₹)</th>

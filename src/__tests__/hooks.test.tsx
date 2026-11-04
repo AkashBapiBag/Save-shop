@@ -63,8 +63,7 @@ describe('hooks/pos/useCart.ts', () => {
     });
   });
 
-  it('prevents adding product with 0 stock', () => {
-    const alertSpy = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
+  it('allows adding product with 0 or negative stock for billing', () => {
     const { result } = renderHook(() => useCart());
 
     const outOfStockProd = { ...sampleProduct, total_current_stock: 0 };
@@ -72,11 +71,9 @@ describe('hooks/pos/useCart.ts', () => {
       result.current.addToCart(outOfStockProd);
     });
 
-    expect(result.current.cart).toHaveLength(0);
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Out of Stock',
-      expect.stringContaining('0 available units')
-    );
+    expect(result.current.cart).toHaveLength(1);
+    expect(result.current.cart[0].product.product_id).toBe('prod-1');
+    expect(result.current.cart[0].quantity).toBe(1);
   });
 
   it('adds product with valid stock', () => {
@@ -107,8 +104,7 @@ describe('hooks/pos/useCart.ts', () => {
     expect(result.current.calculation.subtotal).toBe(100);
   });
 
-  it('prevents adding beyond available stock', () => {
-    const alertSpy = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
+  it('allows adding beyond available stock without blocking', () => {
     const lowStockProduct = { ...sampleProduct, total_current_stock: 2 };
     const { result } = renderHook(() => useCart());
 
@@ -118,15 +114,10 @@ describe('hooks/pos/useCart.ts', () => {
       result.current.addToCart(lowStockProduct);
     });
 
-    expect(result.current.cart[0].quantity).toBe(2);
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Stock Limit Reached',
-      expect.stringContaining('Available stock for "Sample Apple" is 2 KG.')
-    );
+    expect(result.current.cart[0].quantity).toBe(3);
   });
 
-  it('updates quantity and prevents exceeding stock', () => {
-    const alertSpy = vi.spyOn(Alert, 'alert').mockImplementation(() => {});
+  it('updates quantity freely beyond available stock', () => {
     const { result } = renderHook(() => useCart());
 
     act(() => {
@@ -138,16 +129,15 @@ describe('hooks/pos/useCart.ts', () => {
     });
     expect(result.current.cart[0].quantity).toBe(2);
 
-    // Exceed stock (5 max)
+    // Increment beyond stock
     act(() => {
       result.current.updateQuantity('prod-1', 4);
     });
-    expect(alertSpy).toHaveBeenCalledWith('Stock Limit Reached', expect.any(String));
-    expect(result.current.cart[0].quantity).toBe(2);
+    expect(result.current.cart[0].quantity).toBe(6);
 
     // Decrement below 1 removes item
     act(() => {
-      result.current.updateQuantity('prod-1', -2);
+      result.current.updateQuantity('prod-1', -6);
     });
     expect(result.current.cart).toHaveLength(0);
   });
@@ -231,6 +221,33 @@ describe('hooks/pos/useCart.ts', () => {
     expect(result.current.subtotalDiscountValue).toBe('0');
   });
 
+  it('automatically calculates discount as per stock product without manual cashier input', () => {
+    const { result } = renderHook(() => useCart());
+    const discountedProduct: Product = {
+      ...sampleProduct,
+      product_id: 'prod-disc',
+      name: 'Discounted Soap',
+      selling_price: 100,
+      discount_value: 10,
+      discount_type: 'percentage',
+      total_current_stock: 50,
+    };
+
+    act(() => {
+      result.current.addToCart(discountedProduct);
+      result.current.addToCart(discountedProduct); // qty 2
+    });
+
+    // Subtotal: 2 * 100 = 200
+    // Discount from stock: 10% of 200 = 20
+    // Final total: 180
+    expect(result.current.calculation.subtotal).toBe(200);
+    expect(result.current.calculation.discountAmount).toBe(20);
+    expect(result.current.calculation.discountPct).toBe(10);
+    expect(result.current.calculation.finalTotal).toBe(180);
+    expect(result.current.cart[0].item_discount_amount).toBe(20);
+  });
+
   it('supports fixed-amount cashback calculation and delta ignore on unmatched product', () => {
     const { result } = renderHook(() => useCart());
 
@@ -254,6 +271,49 @@ describe('hooks/pos/useCart.ts', () => {
       result.current.updateQuantity('non-existent', 1);
     });
     expect(result.current.cart[0].quantity).toBe(2);
+  });
+
+  it('automatically calculates both discount and cashback from product inventory preset and supports setQuantity', () => {
+    const { result } = renderHook(() => useCart());
+
+    const promoProduct: Product = {
+      ...sampleProduct,
+      product_id: 'promo-1',
+      name: 'Promo Honey',
+      selling_price: 200,
+      discount_value: 10,
+      discount_type: 'percentage', // 10% discount = ₹20 per unit
+      cashback_value: 5,
+      cashback_type: 'percentage', // 5% cashback = ₹10 per unit
+      total_current_stock: 50,
+    };
+
+    act(() => {
+      result.current.addToCart(promoProduct);
+    });
+
+    // Qty 1: Subtotal 200, Discount 20, Final 180, Cashback 10
+    expect(result.current.cart[0].quantity).toBe(1);
+    expect(result.current.cart[0].item_discount_amount).toBe(20);
+    expect(result.current.cart[0].cashback_amount).toBe(10);
+    expect(result.current.calculation.subtotal).toBe(200);
+    expect(result.current.calculation.discountAmount).toBe(20);
+    expect(result.current.calculation.finalTotal).toBe(180);
+    expect(result.current.calculation.totalCashback).toBe(10);
+
+    // Direct setQuantity to 3
+    act(() => {
+      result.current.setQuantity('promo-1', 3);
+    });
+
+    // Qty 3: Subtotal 600, Discount 60 (10%), Final 540, Cashback 30 (5%)
+    expect(result.current.cart[0].quantity).toBe(3);
+    expect(result.current.cart[0].item_discount_amount).toBe(60);
+    expect(result.current.cart[0].cashback_amount).toBe(30);
+    expect(result.current.calculation.subtotal).toBe(600);
+    expect(result.current.calculation.discountAmount).toBe(60);
+    expect(result.current.calculation.finalTotal).toBe(540);
+    expect(result.current.calculation.totalCashback).toBe(30);
   });
 });
 

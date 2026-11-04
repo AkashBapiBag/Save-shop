@@ -7,6 +7,7 @@ import { POSCartSummaryBar } from '@/components/pos/POSCartSummaryBar';
 import { POSCartDrawer } from '@/components/pos/POSCartDrawer';
 import { POSCheckoutModal } from '@/components/pos/POSCheckoutModal';
 import { InventoryProductCard } from '@/components/inventory/InventoryProductCard';
+import { EditProductModal } from '@/components/inventory/EditProductModal';
 import { BatchInspectionModal } from '@/components/inventory/BatchInspectionModal';
 import { StoreCard } from '@/components/stores/StoreCard';
 import { IndianStatePickerModal } from '@/components/stores/IndianStatePickerModal';
@@ -67,6 +68,11 @@ describe('POS Components', () => {
     const outOfStockProd = { ...mockProduct, total_current_stock: 0 };
     rerender(<POSProductCard item={outOfStockProd} inCartQty={0} onAddToCart={onAddMock} />);
     expect(screen.getByText('OUT OF STOCK')).toBeDefined();
+
+    // Negative stock
+    const negStockProd = { ...mockProduct, total_current_stock: -5 };
+    rerender(<POSProductCard item={negStockProd} inCartQty={0} onAddToCart={onAddMock} />);
+    expect(screen.getByText('-5 LITER')).toBeDefined();
 
     // Low stock
     const lowStockProd = { ...mockProduct, total_current_stock: 3 };
@@ -153,6 +159,7 @@ describe('POS Components', () => {
 
     expect(screen.getByText('Order Cart (2 items)')).toBeDefined();
     expect(screen.getByText('Organic Milk')).toBeDefined();
+    expect(screen.getByText(/Cashback: \+₹ 6\.50/i)).toBeDefined();
     expect(screen.getByText('Clear Cart')).toBeDefined();
 
     fireEvent.click(screen.getByText('Clear Cart'));
@@ -163,13 +170,26 @@ describe('POS Components', () => {
     expect(onProceedMock).toHaveBeenCalled();
   });
 
-  it('POSCheckoutModal renders payment methods and triggers checkout', () => {
+  it('POSCheckoutModal renders order summary with items and quantities and triggers checkout', () => {
     const onMethodMock = vi.fn();
     const onConfirmMock = vi.fn();
 
     render(
       <POSCheckoutModal
         visible={true}
+        cart={[
+          {
+            product: mockProduct,
+            quantity: 2,
+            unit_price: 65,
+            item_discount_pct: 0,
+            item_discount_amount: 10,
+            category_discount_pct: 0,
+            cashback_type: 'percentage',
+            cashback_value: 5,
+            cashback_amount: 6.5,
+          },
+        ]}
         finalTotal={120}
         paymentMethod="CASH"
         receivedAmount="150"
@@ -186,6 +206,8 @@ describe('POS Components', () => {
     );
 
     expect(screen.getByText('Complete Payment')).toBeDefined();
+    expect(screen.getByText(/Purchased Items|Order Items/i)).toBeDefined();
+    expect(screen.getByText('Qty: 2')).toBeDefined();
     expect(screen.getAllByText('₹ 120.00')[0]).toBeDefined();
     expect(screen.getByText('UPI')).toBeDefined();
 
@@ -198,16 +220,57 @@ describe('POS Components', () => {
 });
 
 describe('Inventory Components', () => {
-  it('InventoryProductCard renders product details and triggers onPress', () => {
+  it('InventoryProductCard renders product details and triggers onPress and onEdit', () => {
     const onPressMock = vi.fn();
-    render(<InventoryProductCard item={mockProduct} onPress={onPressMock} />);
+    const onEditMock = vi.fn();
+    const discountedProd = {
+      ...mockProduct,
+      discount_value: 12,
+      discount_type: 'percentage' as const,
+      cashback_value: 5,
+      cashback_type: 'percentage' as const,
+    };
+    render(<InventoryProductCard item={discountedProd} onPress={onPressMock} onEdit={onEditMock} />);
 
     expect(screen.getByText('Organic Milk')).toBeDefined();
     expect(screen.getByText('IN STOCK')).toBeDefined();
+    expect(screen.getByText('12% OFF')).toBeDefined();
+    expect(screen.getByText('+5% CB')).toBeDefined();
     expect(screen.getByText(/Min Stock Alert: 5 LITER/i)).toBeDefined();
 
     fireEvent.click(screen.getByText('Organic Milk'));
-    expect(onPressMock).toHaveBeenCalledWith(mockProduct);
+    expect(onPressMock).toHaveBeenCalledWith(discountedProd);
+  });
+
+  it('EditProductModal renders editable fields and locked non-editable info and submits', async () => {
+    const onSubmitMock = vi.fn().mockResolvedValue(undefined);
+    const onCloseMock = vi.fn();
+
+    render(
+      <EditProductModal
+        visible={true}
+        product={mockProduct}
+        existingCategoryStats={[{ name: 'Dairy', count: 1 }]}
+        isSubmitting={false}
+        onClose={onCloseMock}
+        onSubmit={onSubmitMock}
+      />
+    );
+
+    expect(screen.getByText('Update Inventory Item')).toBeDefined();
+    expect(screen.getByText('Non-Editable Parameters')).toBeDefined();
+    expect(screen.getByText(/Selling Price:/i)).toBeDefined();
+    expect(screen.getByText(/₹ 65\.00/i)).toBeDefined();
+    expect(screen.getByText('Save Changes')).toBeDefined();
+
+    fireEvent.click(screen.getByText('Save Changes'));
+    expect(onSubmitMock).toHaveBeenCalledWith('p-1', expect.objectContaining({
+      name: 'Organic Milk',
+      category: 'Dairy',
+      min_stock_alert_threshold: 5,
+      discount_value: 0,
+      cashback_value: 0,
+    }));
   });
 
   it('BatchInspectionModal renders batch details', () => {
@@ -358,6 +421,7 @@ describe('TaxInvoiceModal & Search Modals', () => {
   };
 
   it('TaxInvoiceModal renders receipt data and triggers print and share', async () => {
+    const onCloseMock = vi.fn();
     render(
       <TaxInvoiceModal
         visible={true}
@@ -368,16 +432,22 @@ describe('TaxInvoiceModal & Search Modals', () => {
             authorized_signature_base64: 'sampleSigData',
           },
         }}
-        onClose={() => {}}
+        onClose={onCloseMock}
       />
     );
 
     expect(screen.getByText('Tax Invoice')).toBeDefined();
+    expect(screen.getAllByText(/TAX INVOICE/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByLabelText('Close tax invoice')).toBeDefined();
     expect(screen.getByText('Metro Save Shop')).toBeDefined();
     expect(screen.getByText('Bob Smith')).toBeDefined();
     expect(screen.getByText('Qty')).toBeDefined();
     expect(screen.getByText('Disc (₹)')).toBeDefined();
     expect(screen.getByText('Amount (₹)')).toBeDefined();
+
+    const closeBtn = screen.getByLabelText('Close tax invoice');
+    fireEvent.click(closeBtn);
+    expect(onCloseMock).toHaveBeenCalledTimes(1);
 
     const printBtn = screen.getByText('Print Bill');
     fireEvent.click(printBtn);
@@ -470,6 +540,6 @@ describe('components/MainNavigator.tsx', () => {
 
     // Switch back to Billing
     fireEvent.click(screen.getByText('Billing'));
-    expect(await screen.findByText('Billing Counter')).toBeDefined();
+    expect(await screen.findByText(/Billing (Directory|Counter)/)).toBeDefined();
   });
 });

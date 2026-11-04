@@ -19,12 +19,14 @@ export const POSProductCard: React.FC<POSProductCardProps> = ({
   const stockNum = Number(item.total_current_stock || 0);
   const isOutOfStock = stockNum <= 0;
   const isLowStock = !isOutOfStock && stockNum <= Number(item.min_stock_alert_threshold);
+  const discountVal = Number(item.discount_value || 0);
+  const cashbackVal = Number(item.cashback_value || 0);
 
   return (
     <TouchableOpacity
       style={[
         styles.productCard,
-        isOutOfStock && styles.productCardDisabled,
+        isOutOfStock && styles.productCardOutOfStock,
         inCartQty > 0 && styles.productCardInCart,
       ]}
       activeOpacity={0.8}
@@ -33,7 +35,9 @@ export const POSProductCard: React.FC<POSProductCardProps> = ({
       <View style={styles.productHeader}>
         <Badge
           label={
-            isOutOfStock
+            stockNum < 0
+              ? `${stockNum} ${item.default_unit}`
+              : isOutOfStock
               ? 'OUT OF STOCK'
               : isLowStock
               ? `LOW (${stockNum})`
@@ -58,16 +62,28 @@ export const POSProductCard: React.FC<POSProductCardProps> = ({
       </Text>
 
       <View style={styles.productFooter}>
-        <Text style={styles.productPrice}>₹ {Number(item.selling_price).toFixed(2)}</Text>
+        <View>
+          <Text style={styles.productPrice}>₹ {Number(item.selling_price).toFixed(2)}</Text>
+          {discountVal > 0 && (
+            <Text style={styles.productDiscountBadge}>
+              {item.discount_type === 'amount' ? `₹${discountVal} OFF` : `${discountVal}% OFF`}
+            </Text>
+          )}
+          {cashbackVal > 0 && (
+            <Text style={styles.productCashbackBadge}>
+              {item.cashback_type === 'amount' ? `+₹${cashbackVal} CB` : `+${cashbackVal}% CB`}
+            </Text>
+          )}
+        </View>
         <View
           style={[
             styles.addIconCircle,
-            isOutOfStock && styles.addIconCircleDisabled,
+            isOutOfStock && styles.addIconCircleOutOfStock,
             inCartQty > 0 && styles.addIconCircleInCart,
           ]}
         >
           <Ionicons
-            name={isOutOfStock ? 'ban-outline' : inCartQty > 0 ? 'checkmark' : 'add'}
+            name={inCartQty > 0 ? 'checkmark' : 'add'}
             size={16}
             color="#FFFFFF"
           />
@@ -90,10 +106,9 @@ const styles = StyleSheet.create({
     minHeight: 120,
     ...Shadows.sm,
   },
-  productCardDisabled: {
-    opacity: 0.5,
-    backgroundColor: '#F8FAFC',
-    borderColor: Palette.borderLight,
+  productCardOutOfStock: {
+    borderColor: '#FECACA',
+    backgroundColor: '#FFF9F9',
   },
   productCardInCart: {
     borderColor: Palette.bluePrimary,
@@ -139,6 +154,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Palette.navyPrimary,
   },
+  productDiscountBadge: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Palette.emeraldDark,
+    marginTop: 1,
+  },
+  productCashbackBadge: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Palette.bluePrimary,
+    marginTop: 1,
+  },
   addIconCircle: {
     width: 28,
     height: 28,
@@ -147,8 +174,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addIconCircleDisabled: {
-    backgroundColor: Palette.textMuted,
+  addIconCircleOutOfStock: {
+    backgroundColor: Palette.rose,
   },
   addIconCircleInCart: {
     backgroundColor: Palette.emerald,

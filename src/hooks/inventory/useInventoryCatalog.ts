@@ -27,26 +27,26 @@ export function useInventoryCatalog() {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   }, [products]);
 
+  const activeStoreId = activeStore?.store_id;
+
   const loadCatalog = useCallback(async (showLoader = false) => {
     if (showLoader) {
       setIsLoading(true);
     }
     try {
-      const data = await inventoryApi.listProducts();
+      const data = await inventoryApi.listProducts(activeStoreId ? { store_id: activeStoreId } : undefined);
       setProducts(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
       logError('useInventoryCatalog:loadCatalog', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const activeStoreId = activeStore?.store_id;
+  }, [activeStoreId]);
 
   useEffect(() => {
     let isMounted = true;
     inventoryApi
-      .listProducts()
+      .listProducts(activeStoreId ? { store_id: activeStoreId } : undefined)
       .then((data) => {
         if (isMounted) {
           setProducts(Array.isArray(data) ? data : []);
