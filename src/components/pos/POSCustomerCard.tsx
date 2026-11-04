@@ -66,16 +66,6 @@ export const POSCustomerCard: React.FC<POSCustomerCardProps> = ({
             <Text style={styles.customerName} numberOfLines={1}>
               {customer.name}
             </Text>
-            {customer.is_multi_store && (
-              <View style={styles.multiStoreBadge}>
-                <Ionicons name="business" size={10} color="#047857" style={{ marginRight: 2 }} />
-                <Text style={styles.multiStoreBadgeText}>
-                  {customer.store_ids && customer.store_ids.length > 1
-                    ? `${customer.store_ids.length} Stores`
-                    : 'Common'}
-                </Text>
-              </View>
-            )}
             {customer.total_orders === 0 && (
               <View style={styles.newBadge}>
                 <Text style={styles.newBadgeText}>New</Text>
@@ -116,32 +106,21 @@ export const POSCustomerCard: React.FC<POSCustomerCardProps> = ({
 
         {/* Action Controls */}
         <View style={styles.actionsCol}>
-          {/* View Purchase History Button */}
+          {/* View Purchase History / Bills Button */}
           {customer.total_orders > 0 && (
             <TouchableOpacity
-              style={styles.historyBtn}
+              style={styles.viewBillsBtn}
               onPress={(e) => {
                 e.stopPropagation?.();
                 onViewHistory(customer);
               }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel={`View purchase history for ${customer.name}`}
+              accessibilityLabel={`View bills for ${customer.name}`}
             >
-              <Ionicons name="receipt-outline" size={16} color={Palette.bluePrimary} />
+              <Ionicons name="receipt-outline" size={14} color={Palette.bluePrimary} style={{ marginRight: 5 }} />
+              <Text style={styles.viewBillsBtnText}>View Bill</Text>
             </TouchableOpacity>
           )}
-
-          {/* Select / Start Bill Pill */}
-          {/* <View style={[styles.selectPill, isSelected && styles.selectPillActive]}>
-            <Text style={[styles.selectPillText, isSelected && styles.selectPillTextActive]}>
-              {isSelected ? 'Selected' : 'Bill'}
-            </Text>
-            <Ionicons
-              name={isSelected ? 'checkmark' : 'chevron-forward'}
-              size={14}
-              color={isSelected ? '#FFFFFF' : Palette.bluePrimary}
-            />
-          </View> */}
         </View>
       </View>
     </TouchableOpacity>
@@ -182,22 +161,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Palette.textPrimary,
     flexShrink: 1,
-  },
-  multiStoreBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginLeft: 6,
-  },
-  multiStoreBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#047857',
   },
   newBadge: {
     backgroundColor: Palette.emeraldLight,
@@ -243,6 +206,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 8,
     gap: 6,
+  },
+  viewBillsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Palette.blueSoft,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  viewBillsBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Palette.bluePrimary,
   },
   historyBtn: {
     width: 34,

@@ -178,16 +178,14 @@ export const InventoryScreen: React.FC = () => {
         </View>
 
         <View style={styles.headerRightActions}>
-          {isAdmin && (
-            <TouchableOpacity
-              style={styles.transferBtn}
-              activeOpacity={0.8}
-              onPress={() => setTransferModalVisible(true)}
-            >
-              <Ionicons name="swap-horizontal" size={15} color="#FFFFFF" />
-              <Text style={styles.transferBtnText}>Transfer</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.transferBtn}
+            activeOpacity={0.8}
+            onPress={() => setTransferModalVisible(true)}
+          >
+            <Ionicons name="swap-horizontal" size={15} color="#FFFFFF" />
+            <Text style={styles.transferBtnText}>Transfer</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.receiveBtn}

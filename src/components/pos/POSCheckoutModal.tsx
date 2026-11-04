@@ -24,6 +24,7 @@ export interface POSCheckoutModalProps {
   customerPhone: string;
   isProcessingCheckout: boolean;
   cart?: CartItem[];
+  isWalkIn?: boolean;
   onClose: () => void;
   onSelectPaymentMethod: (method: PaymentMethod) => void;
   onChangeReceivedAmount: (amount: string) => void;
@@ -43,6 +44,7 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
   customerPhone,
   isProcessingCheckout,
   cart,
+  isWalkIn: propIsWalkIn,
   onClose,
   onSelectPaymentMethod,
   onChangeReceivedAmount,
@@ -52,7 +54,10 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
 }) => {
   const parsedReceived = parseFloat(receivedAmount) || 0;
   const isCredit = paymentMethod === 'CREDIT';
-  const isWalkIn = customerName.toLowerCase().includes('walk-in');
+  const isWalkIn =
+    propIsWalkIn !== undefined
+      ? propIsWalkIn
+      : customerName.toLowerCase().includes('walk-in');
 
   return (
     <Modal
@@ -193,12 +198,17 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                 </View>
               </View>
 
-              {/* Customer Details - Name required, Phone optional */}
+              {/* Customer Details */}
               <Text style={styles.sectionLabel}>
                 Customer Details
               </Text>
 
-              <View style={styles.customerPreviewBox}>
+              <View
+                style={[
+                  styles.customerPreviewBox,
+                  !(isWalkIn || !customerName.trim()) && { marginBottom: 16 },
+                ]}
+              >
                 <View style={styles.customerPreviewLeft}>
                   <View style={styles.customerAvatarSmall}>
                     <Ionicons name="person" size={16} color={Palette.bluePrimary} />
@@ -218,34 +228,36 @@ export const POSCheckoutModal: React.FC<POSCheckoutModalProps> = ({
                 </View>
               </View>
 
-              <View style={{ marginBottom: 10 }}>
-                <Input
-                  placeholder="Customer Name *"
-                  value={customerName}
-                  onChangeText={onChangeCustomerName}
-                  icon={<Ionicons name="person-outline" size={16} color={Palette.textMuted} />}
-                  containerStyle={{ marginBottom: 4 }}
-                />
-                {!customerName.trim() && (
+              {/* Show customer name field only if missing/empty */}
+              {!customerName.trim() && (
+                <View style={{ marginBottom: 10 }}>
+                  <Input
+                    placeholder="Customer Name *"
+                    value={customerName}
+                    onChangeText={onChangeCustomerName}
+                    icon={<Ionicons name="person-outline" size={16} color={Palette.textMuted} />}
+                    containerStyle={{ marginBottom: 4 }}
+                  />
                   <Text style={styles.fieldErrorText}>* Customer name is required for bill</Text>
-                )}
-              </View>
+                </View>
+              )}
 
-              <View style={{ marginBottom: 16 }}>
-                <Input
-                  placeholder="Contact Mobile Number (Optional)"
-                  value={customerPhone}
-                  onChangeText={onChangeCustomerPhone}
-                  keyboardType="phone-pad"
-                  icon={<Ionicons name="call-outline" size={16} color={Palette.textMuted} />}
-                  containerStyle={{ marginBottom: 4 }}
-                />
-                <Text style={styles.optionalHelperText}>
-                  {isWalkIn
-                    ? '💡 Mobile number is optional for unknown walk-in customers'
-                    : '💡 Mobile number is optional for bill generation'}
-                </Text>
-              </View>
+              {/* Only for walk-in customer, show the mobile number field */}
+              {isWalkIn && (
+                <View style={{ marginBottom: 16 }}>
+                  <Input
+                    placeholder="Contact Mobile Number (Optional)"
+                    value={customerPhone}
+                    onChangeText={onChangeCustomerPhone}
+                    keyboardType="phone-pad"
+                    icon={<Ionicons name="call-outline" size={16} color={Palette.textMuted} />}
+                    containerStyle={{ marginBottom: 4 }}
+                  />
+                  <Text style={styles.optionalHelperText}>
+                    💡 Mobile number is optional for unknown walk-in customers
+                  </Text>
+                </View>
+              )}
 
               {/* Confirm Checkout Action */}
               <Button

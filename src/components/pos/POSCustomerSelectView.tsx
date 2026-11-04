@@ -14,7 +14,6 @@ import { Customer } from '@/types/api';
 import { customerApi } from '@/services/api';
 import { Palette, Shadows } from '@/theme/designSystem';
 import { POSCustomerCard } from '@/components/pos/POSCustomerCard';
-import { CreateCustomerModal } from '@/components/pos/CreateCustomerModal';
 import { useAuth } from '@/context/AuthContext';
 import { logError } from '@/utils/errorHandler';
 
@@ -37,7 +36,6 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
   const [sortBy, setSortBy] = useState<SortCriteria>('recent');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [createModalVisible, setCreateModalVisible] = useState<boolean>(false);
 
   const loadCustomers = useCallback(async (isPullRefresh = false) => {
     if (isPullRefresh) {
@@ -90,15 +88,6 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
     onSelectCustomer(walkInCustomer);
   };
 
-  const handleCustomerCreated = (newCustomer: Customer) => {
-    // Add to list so customer appears in phone book directory immediately
-    setCustomers((prev) => {
-      const exists = prev.some((c) => c.customer_id === newCustomer.customer_id);
-      return exists ? prev : [newCustomer, ...prev];
-    });
-    onSelectCustomer(newCustomer);
-  };
-
   const sortChips: { key: SortCriteria; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { key: 'recent', label: 'Recent', icon: 'time-outline' },
     { key: 'name', label: 'A-Z', icon: 'text-outline' },
@@ -134,16 +123,6 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
               <Text style={styles.salesHistoryButtonText}>Sales</Text>
             </TouchableOpacity>
           )}
-
-          <TouchableOpacity
-            style={styles.addCustomerHeaderBtn}
-            onPress={() => setCreateModalVisible(true)}
-            activeOpacity={0.8}
-            accessibilityLabel="Add new customer"
-          >
-            <Ionicons name="person-add" size={15} color="#FFFFFF" style={{ marginRight: 4 }} />
-            <Text style={styles.addCustomerHeaderBtnText}>+ Customer</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -259,13 +238,6 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
                     ? `Matching Customers (${customers.length})`
                     : `Saved Customers (${customers.length})`}
                 </Text>
-                <TouchableOpacity
-                  onPress={() => setCreateModalVisible(true)}
-                  style={styles.quickAddLink}
-                >
-                  <Ionicons name="add-circle-outline" size={14} color={Palette.bluePrimary} style={{ marginRight: 3 }} />
-                  <Text style={styles.quickAddLinkText}>Add New</Text>
-                </TouchableOpacity>
               </View>
             </View>
           }
@@ -283,19 +255,17 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
               </Text>
               <Text style={styles.emptySubtitle}>
                 {searchQuery
-                  ? `No saved customer matches "${searchQuery}". You can add them or bill as Walk-in Customer above.`
-                  : 'You can tap the Walk-in Customer card above or add your first customer to the phone book.'}
+                  ? `No saved customer matches "${searchQuery}". Tap below to bill as Walk-in Customer.`
+                  : 'Tap below to bill as Walk-in Customer.'}
               </Text>
 
               <TouchableOpacity
                 style={styles.emptyAddBtn}
-                onPress={() => setCreateModalVisible(true)}
+                onPress={handleSelectWalkIn}
                 activeOpacity={0.8}
               >
-                <Ionicons name="person-add" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.emptyAddBtnText}>
-                  {searchQuery ? `Add "${searchQuery}" as Customer` : 'Add First Customer'}
-                </Text>
+                <Ionicons name="walk" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.emptyAddBtnText}>Bill as Walk-in Customer</Text>
               </TouchableOpacity>
             </View>
           }
@@ -308,14 +278,6 @@ export const POSCustomerSelectView: React.FC<POSCustomerSelectViewProps> = ({
           )}
         />
       )}
-
-      {/* Create Customer Modal */}
-      <CreateCustomerModal
-        visible={createModalVisible}
-        initialQuery={searchQuery}
-        onClose={() => setCreateModalVisible(false)}
-        onCustomerCreated={handleCustomerCreated}
-      />
     </View>
   );
 };
@@ -379,20 +341,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: Palette.bluePrimary,
-  },
-  addCustomerHeaderBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Palette.bluePrimary,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    ...Shadows.sm,
-  },
-  addCustomerHeaderBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
   searchBarSection: {
     paddingHorizontal: 16,
@@ -476,15 +424,6 @@ const styles = StyleSheet.create({
     color: Palette.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-  },
-  quickAddLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  quickAddLinkText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Palette.bluePrimary,
   },
   listContent: {
     paddingHorizontal: 16,

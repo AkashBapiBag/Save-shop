@@ -88,9 +88,10 @@ describe('POS Customer Components & Billing Flow', () => {
       fireEvent.click(screen.getByText('Sourav Ganguly'));
       expect(onSelectMock).toHaveBeenCalledWith(mockCustomerWithOrders);
 
-      // Trigger history
-      const historyBtn = screen.getByLabelText(/View purchase history for Sourav Ganguly/i);
-      fireEvent.click(historyBtn);
+      // Trigger history via View Bill button
+      const viewBillBtn = screen.getByText('View Bill');
+      expect(viewBillBtn).toBeDefined();
+      fireEvent.click(viewBillBtn);
       expect(onHistoryMock).toHaveBeenCalledWith(mockCustomerWithOrders);
     });
 
@@ -109,9 +110,10 @@ describe('POS Customer Components & Billing Flow', () => {
       expect(screen.getByText('Sunita Das')).toBeDefined();
       expect(screen.getByText('No phone number')).toBeDefined();
       expect(screen.getByText('New')).toBeDefined();
+      expect(screen.queryByText('View Bill')).toBeNull();
     });
 
-    it('renders common customer across 2 stores with multi-store badge', () => {
+    it('does not show 2 store / 3 store badge on customer card, only shows total and order count', () => {
       const onSelectMock = vi.fn();
       const onHistoryMock = vi.fn();
       const multiStoreCustomer: Customer = {
@@ -128,7 +130,13 @@ describe('POS Customer Components & Billing Flow', () => {
         />
       );
 
-      expect(screen.getByText('2 Stores')).toBeDefined();
+      // Store count badges like "2 Stores" are hidden
+      expect(screen.queryByText('2 Stores')).toBeNull();
+      expect(screen.queryByText('Common')).toBeNull();
+      // Total spent and orders count are shown
+      expect(screen.getByText('₹12500')).toBeDefined();
+      expect(screen.getByText('5')).toBeDefined();
+      expect(screen.getByText('View Bill')).toBeDefined();
     });
   });
 
@@ -261,7 +269,7 @@ describe('POS Customer Components & Billing Flow', () => {
       expect(onReceiptMock).toHaveBeenCalledWith('tx-999');
     });
 
-    it('displays cross-store network summary when customer is common to multiple stores', async () => {
+    it('shows customer bills without 2 store 3 store banners', async () => {
       const mockHistoryMultiStore: CustomerHistoryResponse = {
         customer: { ...mockCustomerWithOrders, is_multi_store: true, store_ids: ['store-1', 'store-2'] },
         transactions: [],
@@ -284,7 +292,13 @@ describe('POS Customer Components & Billing Flow', () => {
         );
       });
 
-      expect(await screen.findByText(/All Stores Total: ₹ 1800.00 \(5 orders\)/i)).toBeDefined();
+      // Does not show multi-store / all stores banner
+      expect(screen.queryByText(/All Stores/i)).toBeNull();
+      expect(screen.queryByText(/2 Stores/i)).toBeNull();
+      // Shows total spend and total bills
+      expect(screen.getByText('Total Spend')).toBeDefined();
+      expect(screen.getByText('Total Bills')).toBeDefined();
+      expect(screen.getByText('₹ 500.00')).toBeDefined();
     });
   });
 
@@ -336,6 +350,10 @@ describe('POS Customer Components & Billing Flow', () => {
       expect(await screen.findByText('Sourav Ganguly')).toBeDefined();
       expect(screen.getByText('Sunita Das')).toBeDefined();
 
+      // Verify + Customer or Add New button is removed from billing section
+      expect(screen.queryByText('+ Customer')).toBeNull();
+      expect(screen.queryByText('Add New')).toBeNull();
+
       // Click Walk-in Customer card
       const walkInCard = screen.getByLabelText(/Select walk-in customer for billing/i);
       fireEvent.click(walkInCard);
@@ -375,11 +393,43 @@ describe('POS Customer Components & Billing Flow', () => {
       expect(screen.getByText(/Mobile optional/i)).toBeDefined();
       expect(screen.getByText(/Mobile number is optional for unknown walk-in customers/i)).toBeDefined();
 
+      // Customer name input is hidden, but mobile number input is shown for walk-in customer
+      expect(screen.queryByPlaceholderText('Customer Name *')).toBeNull();
+      expect(screen.getByPlaceholderText('Contact Mobile Number (Optional)')).toBeDefined();
+
       // Button is enabled and generates bill
       const generateBtn = screen.getByText('Generate Bill & Receipt');
       expect(generateBtn).toBeDefined();
       fireEvent.click(generateBtn);
       expect(onConfirmMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not show name and mobile number inputs for registered customers', () => {
+      render(
+        <POSCheckoutModal
+          visible={true}
+          finalTotal={500}
+          paymentMethod="UPI"
+          receivedAmount="500"
+          customerName="Sourav Ganguly"
+          customerPhone="9830012345"
+          isProcessingCheckout={false}
+          onClose={() => {}}
+          onSelectPaymentMethod={() => {}}
+          onChangeReceivedAmount={() => {}}
+          onChangeCustomerName={() => {}}
+          onChangeCustomerPhone={() => {}}
+          onConfirmCheckout={() => {}}
+        />
+      );
+
+      // Customer details preview is visible
+      expect(screen.getByText('Sourav Ganguly')).toBeDefined();
+      expect(screen.getByText(/9830012345/)).toBeDefined();
+
+      // Redundant inputs should NOT be shown
+      expect(screen.queryByPlaceholderText('Customer Name *')).toBeNull();
+      expect(screen.queryByPlaceholderText('Contact Mobile Number (Optional)')).toBeNull();
     });
   });
 });

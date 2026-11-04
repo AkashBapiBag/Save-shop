@@ -19,7 +19,8 @@ export interface CustomerHistoryModalProps {
   visible: boolean;
   customer: Customer | null;
   onClose: () => void;
-  onViewReceipt: (transactionId: string) => void;
+  onViewReceipt: (transactionId: string) => void | Promise<void>;
+  loadingReceiptId?: string | null;
 }
 
 export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
@@ -27,9 +28,11 @@ export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
   customer,
   onClose,
   onViewReceipt,
+  loadingReceiptId,
 }) => {
   const [history, setHistory] = useState<CustomerHistoryResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [localLoadingId, setLocalLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -63,6 +66,15 @@ export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
   const totalSpentVal = parseFloat(String(history?.total_spent ?? customer.total_spent ?? 0));
   const totalOrdersVal = history?.total_orders ?? customer.total_orders ?? 0;
 
+  const handlePressReceipt = async (transactionId: string) => {
+    setLocalLoadingId(transactionId);
+    try {
+      await onViewReceipt(transactionId);
+    } finally {
+      setLocalLoadingId(null);
+    }
+  };
+
   const renderHistoryItem = ({ item }: { item: CustomerTransactionHistoryItem }) => {
     const formattedDate = new Date(item.created_at).toLocaleDateString('en-IN', {
       day: 'numeric',
@@ -72,14 +84,18 @@ export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
       minute: '2-digit',
     });
     const finalTotalNum = parseFloat(String(item.final_total || 0));
+    const isItemLoading = localLoadingId === item.transaction_id || loadingReceiptId === item.transaction_id;
 
     return (
       <View style={styles.historyCard}>
         <View style={styles.historyCardTop}>
-          <View>
+          <TouchableOpacity
+            onPress={() => void handlePressReceipt(item.transaction_id)}
+            activeOpacity={0.7}
+          >
             <Text style={styles.invoiceNumText}>{item.invoice_number}</Text>
             <Text style={styles.dateText}>{formattedDate}</Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.amountCol}>
             <Text style={styles.historyTotalAmount}>₹ {finalTotalNum.toFixed(2)}</Text>
             <View style={styles.statusPill}>
@@ -104,11 +120,19 @@ export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
 
           <TouchableOpacity
             style={styles.viewInvoiceBtn}
-            onPress={() => onViewReceipt(item.transaction_id)}
-            accessibilityLabel={`View invoice ${item.invoice_number}`}
+            onPress={() => void handlePressReceipt(item.transaction_id)}
+            disabled={isItemLoading}
+            accessibilityRole="button"
+            accessibilityLabel={`Generate PDF for invoice ${item.invoice_number}`}
           >
-            <Ionicons name="document-text-outline" size={14} color={Palette.bluePrimary} style={{ marginRight: 4 }} />
-            <Text style={styles.viewInvoiceBtnText}>Invoice PDF</Text>
+            {isItemLoading ? (
+              <ActivityIndicator size="small" color={Palette.bluePrimary} />
+            ) : (
+              <>
+                <Ionicons name="document-text-outline" size={14} color={Palette.bluePrimary} style={{ marginRight: 4 }} />
+                <Text style={styles.viewInvoiceBtnText}>Invoice PDF</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -153,24 +177,16 @@ export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statCol}>
-              <Text style={styles.statLabel}>Total Invoices</Text>
+              <Text style={styles.statLabel}>Total Bills</Text>
               <Text style={styles.statValue}>{totalOrdersVal}</Text>
             </View>
           </View>
 
-          {/* Multi-Store Network Banner if applicable */}
-          {history?.all_stores_orders && history.all_stores_orders > totalOrdersVal ? (
-            <View style={styles.multiStoreNetworkBanner}>
-              <Ionicons name="business" size={14} color="#047857" style={{ marginRight: 6 }} />
-              <Text style={styles.multiStoreNetworkText}>
-                All Stores Total: ₹ {parseFloat(String(history.all_stores_spent || 0)).toFixed(2)} ({history.all_stores_orders} orders)
-              </Text>
-            </View>
-          ) : null}
-
           {/* Past Transactions List */}
           <View style={styles.listSection}>
-            <Text style={styles.sectionTitle}>Purchase & Bill History</Text>
+            <Text style={styles.sectionTitle}>
+              Bills Purchased ({history?.transactions.length || 0})
+            </Text>
             {isLoading ? (
               <View style={styles.centerLoading}>
                 <ActivityIndicator size="small" color={Palette.bluePrimary} />
@@ -264,23 +280,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Palette.textPrimary,
     marginTop: 2,
-  },
-  multiStoreNetworkBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: 16,
-    marginTop: 10,
-  },
-  multiStoreNetworkText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#065F46',
   },
   listSection: {
     flex: 1,

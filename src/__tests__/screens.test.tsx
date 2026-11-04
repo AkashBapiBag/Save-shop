@@ -358,6 +358,25 @@ describe('screens/InventoryScreen.tsx', () => {
     expect(await screen.findByText('Farm Fresh Eggs')).toBeDefined();
     expect(screen.queryByTestId('inventory-skeleton')).toBeNull();
   });
+
+  it('renders the Transfer button and opens transfer modal', async () => {
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <InventoryScreen />
+        </AuthProvider>
+      );
+    });
+
+    const transferBtn = screen.getByText('Transfer');
+    expect(transferBtn).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(transferBtn);
+    });
+
+    expect(await screen.findByText('Inter-Store Stock Transfer')).toBeDefined();
+  });
 });
 
 describe('screens/DashboardScreen.tsx', () => {

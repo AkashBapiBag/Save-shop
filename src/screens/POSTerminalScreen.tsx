@@ -68,6 +68,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
   const [activeCustomer, setActiveCustomer] = useState<Customer | null>(null);
   const [historyCustomer, setHistoryCustomer] = useState<Customer | null>(null);
   const [historyModalVisible, setHistoryModalVisible] = useState<boolean>(false);
+  const [returnToHistoryOnClose, setReturnToHistoryOnClose] = useState<boolean>(false);
 
   // Modals
   const [cartDrawerVisible, setCartDrawerVisible] = useState<boolean>(false);
@@ -107,7 +108,9 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
     setCartDrawerVisible(false);
     setCheckoutModalVisible(false);
     setActiveCustomer(null);
+    setHistoryCustomer(null);
     setHistoryModalVisible(false);
+    setReturnToHistoryOnClose(false);
     setTaxInvoiceVisible(false);
     setReceiptData(null);
   }
@@ -294,6 +297,39 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
     }
   };
 
+  const handleViewReceiptFromHistory = async (txId: string) => {
+    try {
+      const r = await billingApi.getReceipt(txId);
+      setReceiptData(r);
+      // Temporarily hide history modal to prevent simultaneous Modal presentation issues
+      setHistoryModalVisible(false);
+      setReturnToHistoryOnClose(true);
+      setTaxInvoiceVisible(true);
+    } catch (e) {
+      showErrorAlert(e, 'Receipt Error', 'Could not load receipt.');
+    }
+  };
+
+  const handleCloseTaxInvoiceInDirectory = () => {
+    setTaxInvoiceVisible(false);
+    setReceiptData(null);
+    if (returnToHistoryOnClose && historyCustomer) {
+      setReturnToHistoryOnClose(false);
+      setHistoryModalVisible(true);
+    }
+  };
+
+  const handleCloseTaxInvoiceInPOS = () => {
+    setTaxInvoiceVisible(false);
+    setReceiptData(null);
+    if (returnToHistoryOnClose && historyCustomer) {
+      setReturnToHistoryOnClose(false);
+      setHistoryModalVisible(true);
+    } else {
+      setActiveCustomer(null);
+    }
+  };
+
   // Step 1: Customer Selection View (Phone Book Directory)
   if (!activeCustomer) {
     return (
@@ -318,23 +354,16 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
           onClose={() => {
             setHistoryModalVisible(false);
             setHistoryCustomer(null);
+            setReturnToHistoryOnClose(false);
           }}
-          onViewReceipt={async (txId) => {
-            try {
-              const r = await billingApi.getReceipt(txId);
-              setReceiptData(r);
-              setTaxInvoiceVisible(true);
-            } catch (e) {
-              showErrorAlert(e, 'Receipt Error', 'Could not load receipt.');
-            }
-          }}
+          onViewReceipt={handleViewReceiptFromHistory}
         />
 
         {/* Tax Invoice Modal */}
         <TaxInvoiceModal
           visible={taxInvoiceVisible}
           receipt={receiptData}
-          onClose={() => setTaxInvoiceVisible(false)}
+          onClose={handleCloseTaxInvoiceInDirectory}
         />
       </View>
     );
@@ -535,6 +564,7 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
         customerName={customerName}
         customerPhone={customerPhone}
         isProcessingCheckout={isProcessingCheckout}
+        isWalkIn={activeCustomer?.customer_id === 'guest' || customerName.toLowerCase().includes('walk-in')}
         onClose={() => setCheckoutModalVisible(false)}
         onSelectPaymentMethod={setPaymentMethod}
         onChangeReceivedAmount={setReceivedAmount}
@@ -550,26 +580,16 @@ export const POSTerminalScreen: React.FC<POSTerminalScreenProps> = ({ onNavigate
         onClose={() => {
           setHistoryModalVisible(false);
           setHistoryCustomer(null);
+          setReturnToHistoryOnClose(false);
         }}
-        onViewReceipt={async (txId) => {
-          try {
-            const r = await billingApi.getReceipt(txId);
-            setReceiptData(r);
-            setTaxInvoiceVisible(true);
-          } catch (e) {
-            showErrorAlert(e, 'Receipt Error', 'Could not load receipt.');
-          }
-        }}
+        onViewReceipt={handleViewReceiptFromHistory}
       />
 
       {/* Tax Invoice Modal */}
       <TaxInvoiceModal
         visible={taxInvoiceVisible}
         receipt={receiptData}
-        onClose={() => {
-          setTaxInvoiceVisible(false);
-          setActiveCustomer(null);
-        }}
+        onClose={handleCloseTaxInvoiceInPOS}
       />
     </View>
   );

@@ -103,7 +103,7 @@ export const getProductionApiUrl = (): string => {
     return window.location.origin.replace(/\/+$/, '');
   }
 
-  return 'https://chamber-golf-guardian-thumbnails.trycloudflare.com';
+  return 'https://stg.mysaveshop.online';
 };
 
 export const getLocalDevApiUrl = (): string => {
@@ -631,6 +631,10 @@ export const transferApi = {
 
   getTransfer: async (transferId: string): Promise<StockTransfer> => {
     return apiRequest<StockTransfer>(`/api/v1/inventory/transfers/${transferId}`);
+  },
+
+  getDestinationStores: async (): Promise<Store[]> => {
+    return apiRequest<Store[]>('/api/v1/inventory/transfers/destinations');
   },
 };
 

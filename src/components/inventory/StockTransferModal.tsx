@@ -222,6 +222,32 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
   );
 
   const { stores, activeStore, user } = useAuth();
+  const [allStores, setAllStores] = useState<Store[]>([]);
+
+  // Fetch available destination stores across the system
+  useEffect(() => {
+    let isMounted = true;
+    if (visible && typeof transferApi.getDestinationStores === 'function') {
+      transferApi
+        .getDestinationStores()
+        .then((fetched) => {
+          if (isMounted && Array.isArray(fetched) && fetched.length > 0) {
+            setAllStores(fetched);
+          }
+        })
+        .catch(() => {
+          // Graceful fallback to auth stores
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [visible]);
+
+  const combinedStores = useMemo(() => {
+    if (allStores.length > 0) return allStores;
+    return stores;
+  }, [allStores, stores]);
 
   // Primary Tabs: 'transfer' | 'history'
   const [activeTab, setActiveTab] = useState<'transfer' | 'history'>('transfer');
@@ -256,19 +282,19 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
 
   // Initialize store defaults
   useEffect(() => {
-    if (visible && stores.length > 0) {
-      const defaultSource = activeStore?.store_id || stores[0].store_id;
+    if (visible && combinedStores.length > 0) {
+      const defaultSource = activeStore?.store_id || combinedStores[0].store_id;
       setSourceStoreId(defaultSource);
       setHistoryStoreFilter(defaultSource);
 
-      const defaultDest = stores.find((s) => s.store_id !== defaultSource)?.store_id || '';
-      setDestStoreId(defaultDest);
+      const defaultDest = combinedStores.find((s) => s.store_id !== defaultSource)?.store_id || '';
+      setDestStoreId((prev) => (prev && prev !== defaultSource && combinedStores.some((s) => s.store_id === prev) ? prev : defaultDest));
 
       setTransferItems([]);
       setTransferNotes('');
       setStorePickerVisible(false);
     }
-  }, [visible, activeStore?.store_id, stores]);
+  }, [visible, activeStore?.store_id, combinedStores]);
 
   // Fetch Source store products when sourceStoreId changes
   useEffect(() => {
@@ -470,8 +496,8 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
     }
   };
 
-  const sourceStore = stores.find((s) => s.store_id === sourceStoreId);
-  const destStore = stores.find((s) => s.store_id === destStoreId);
+  const sourceStore = combinedStores.find((s) => s.store_id === sourceStoreId);
+  const destStore = combinedStores.find((s) => s.store_id === destStoreId);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -540,14 +566,14 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
           {/* Modal Body Container with flex: 1 for robust scrolling */}
           <View style={styles.modalBodyContainer}>
             {activeTab === 'transfer' ? (
-              stores.length < 2 ? (
+              combinedStores.length < 2 ? (
                 <View style={styles.insufficientStoresContainer}>
                   <View style={styles.insufficientIconCircle}>
                     <Ionicons name="storefront-outline" size={36} color={Palette.amber} />
                   </View>
                   <Text style={styles.insufficientTitle}>At Least 2 Stores Required</Text>
                   <Text style={styles.insufficientDesc}>
-                    Inter-store stock transfer requires administrative access to at least two active stores.
+                    Inter-store stock transfer requires at least two active stores in the system.
                     Please create or join another store in Store Management to enable this feature.
                   </Text>
                 </View>
@@ -1001,7 +1027,7 @@ export const StockTransferModal: React.FC<StockTransferModalProps> = ({
             visible={storePickerVisible}
             title="Select Destination Store"
             subtitle="Choose the store receiving inward stock"
-            stores={stores.filter((s) => s.store_id !== sourceStoreId)}
+            stores={combinedStores.filter((s) => s.store_id !== sourceStoreId)}
             selectedStoreId={destStoreId}
             onSelect={(selectedStore) => {
               setDestStoreId(selectedStore.store_id);
