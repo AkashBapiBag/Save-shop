@@ -103,7 +103,8 @@ export const getProductionApiUrl = (): string => {
     return window.location.origin.replace(/\/+$/, '');
   }
 
-  return 'https://stg.mysaveshop.online';
+  // Fallback to configured API URL or empty string
+  return (process.env.EXPO_PUBLIC_API_URL || '').trim().replace(/\/+$/, '');
 };
 
 export const getLocalDevApiUrl = (): string => {
