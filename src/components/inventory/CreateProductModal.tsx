@@ -215,10 +215,10 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
                 />
               </View>
 
-              {/* Product Cashback */}
+              {/* Product S.I. Point */}
               <View style={styles.discountSection}>
                 <View style={styles.discountLabelRow}>
-                  <Text style={styles.inputLabel}>Product Cashback (Optional)</Text>
+                  <Text style={styles.inputLabel}>Product S.I. Point (Optional)</Text>
                   <View style={styles.toggleButtonGroup}>
                     <TouchableOpacity
                       style={[styles.toggleBtn, cashbackType === 'percentage' && styles.toggleBtnActive]}
@@ -239,7 +239,7 @@ export const CreateProductModal: React.FC<CreateProductModalProps> = ({
                   </View>
                 </View>
                 <Input
-                  placeholder={cashbackType === 'percentage' ? 'e.g. 5 (for 5% cashback)' : 'e.g. 10 (for ₹10 cashback)'}
+                  placeholder={cashbackType === 'percentage' ? 'e.g. 5 (for 5% S.I. Point)' : 'e.g. 10 (for ₹10 S.I. Point)'}
                   value={cashbackValue}
                   onChangeText={setCashbackValue}
                   keyboardType="numeric"

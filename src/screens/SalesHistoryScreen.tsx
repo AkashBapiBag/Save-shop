@@ -244,7 +244,7 @@ export const SalesHistoryScreen: React.FC = () => {
               <>
                 <View style={{ width: 6 }} />
                 <View style={styles.cashbackPill}>
-                  <Text style={styles.cashbackPillText}>₹{cbAmt.toFixed(0)} CB</Text>
+                  <Text style={styles.cashbackPillText}>₹{cbAmt.toFixed(0)} S.I. Point</Text>
                 </View>
               </>
             )}
@@ -332,7 +332,7 @@ export const SalesHistoryScreen: React.FC = () => {
         </View>
         <View style={styles.metricDivider} />
         <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>Cashback</Text>
+          <Text style={styles.metricLabel}>S.I. Point</Text>
           <Text style={[styles.metricValue, { color: Palette.bluePrimary }]}>
             ₹ {metrics.totalCashback.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
           </Text>

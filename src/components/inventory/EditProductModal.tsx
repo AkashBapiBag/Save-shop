@@ -179,10 +179,10 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
                 />
               </View>
 
-              {/* 5. Cashback Value (Editable with % / ₹ toggle) */}
+              {/* 5. S.I. Point Value (Editable with % / ₹ toggle) */}
               <View style={styles.discountSection}>
                 <View style={styles.discountLabelRow}>
-                  <Text style={styles.inputLabel}>Product Cashback</Text>
+                  <Text style={styles.inputLabel}>Product S.I. Point</Text>
                   <View style={styles.toggleButtonGroup}>
                     <TouchableOpacity
                       style={[styles.toggleBtn, cashbackType === 'percentage' && styles.toggleBtnActive]}
@@ -203,7 +203,7 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
                   </View>
                 </View>
                 <Input
-                  placeholder={cashbackType === 'percentage' ? 'e.g. 5 (5% cashback)' : 'e.g. 10 (₹10 cashback)'}
+                  placeholder={cashbackType === 'percentage' ? 'e.g. 5 (5% S.I. Point)' : 'e.g. 10 (₹10 S.I. Point)'}
                   value={cashbackValue}
                   onChangeText={setCashbackValue}
                   keyboardType="numeric"

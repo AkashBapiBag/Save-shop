@@ -71,7 +71,7 @@ export const POSProductCard: React.FC<POSProductCardProps> = ({
           )}
           {cashbackVal > 0 && (
             <Text style={styles.productCashbackBadge}>
-              {item.cashback_type === 'amount' ? `+₹${cashbackVal} CB` : `+${cashbackVal}% CB`}
+              {item.cashback_type === 'amount' ? `+₹${cashbackVal} S.I. Point` : `+${cashbackVal}% S.I. Point`}
             </Text>
           )}
         </View>

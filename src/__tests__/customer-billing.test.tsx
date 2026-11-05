@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, screen, act } from '@testing-library/react';
 import { POSCustomerCard } from '@/components/pos/POSCustomerCard';
@@ -226,6 +227,37 @@ describe('POS Customer Components & Billing Flow', () => {
       expect(onCreatedMock).toHaveBeenCalledWith(existingCustomer);
       expect(onCloseMock).toHaveBeenCalled();
     });
+
+    it('restricts adding customer with a mobile number that already exists in the store', async () => {
+      const alertSpy = vi.spyOn(Alert, 'alert');
+      const onCreatedMock = vi.fn();
+
+      render(
+        <CreateCustomerModal
+          visible={true}
+          existingCustomers={[mockCustomerWithOrders]}
+          onClose={() => {}}
+          onCustomerCreated={onCreatedMock}
+        />
+      );
+
+      const nameInput = screen.getByPlaceholderText('Enter full name');
+      const phoneInput = screen.getByPlaceholderText('e.g. 9876543210 (Optional)');
+      fireEvent.change(nameInput, { target: { value: 'Duplicate Test' } });
+      fireEvent.change(phoneInput, { target: { value: '9830012345' } });
+
+      const submitBtn = screen.getByText('Save & Start Billing');
+      await act(async () => {
+        fireEvent.click(submitBtn);
+      });
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Mobile Number Already Registered',
+        expect.stringContaining('already exists in this store')
+      );
+      expect(customerApi.createCustomer).not.toHaveBeenCalled();
+      expect(onCreatedMock).not.toHaveBeenCalled();
+    });
   });
 
   describe('CustomerHistoryModal', () => {
@@ -424,9 +456,9 @@ describe('POS Customer Components & Billing Flow', () => {
       expect(await screen.findByText('Sourav Ganguly')).toBeDefined();
       expect(screen.getByText('Sunita Das')).toBeDefined();
 
-      // Verify + Customer or Add New button is removed from billing section
-      expect(screen.queryByText('+ Customer')).toBeNull();
-      expect(screen.queryByText('Add New')).toBeNull();
+      // Verify + Customer and Add New buttons are accessible in billing section for admin and store operators
+      expect(screen.getByText('+ Customer')).toBeDefined();
+      expect(screen.getByText('Add New')).toBeDefined();
 
       // Click Walk-in Customer card
       const walkInCard = screen.getByLabelText(/Select walk-in customer for billing/i);
@@ -439,6 +471,56 @@ describe('POS Customer Components & Billing Flow', () => {
           phone: null,
         })
       );
+    });
+
+    it('allows both admin and store operator to open create customer modal and add a new customer', async () => {
+      vi.mocked(customerApi.listCustomers).mockResolvedValue([mockCustomerWithOrders]);
+      const createdCustomer: Customer = {
+        customer_id: 'cust-999',
+        store_id: 'store-1',
+        name: 'Rahul Roy',
+        phone: '9876543210',
+        total_spent: 0,
+        total_orders: 0,
+        total_due: 0,
+        advance_balance: 0,
+        created_at: new Date().toISOString(),
+      };
+      vi.mocked(customerApi.createCustomer).mockResolvedValue(createdCustomer);
+
+      const onSelectMock = vi.fn();
+
+      render(
+        <AuthProvider>
+          <POSCustomerSelectView
+            onSelectCustomer={onSelectMock}
+            onViewCustomerHistory={() => {}}
+          />
+        </AuthProvider>
+      );
+
+      expect(await screen.findByText('Billing Directory')).toBeDefined();
+
+      const addCustomerBtn = screen.getByText('+ Customer');
+      fireEvent.click(addCustomerBtn);
+
+      expect(await screen.findByText('New Customer')).toBeDefined();
+
+      const nameInput = screen.getByPlaceholderText('Enter full name');
+      const phoneInput = screen.getByPlaceholderText('e.g. 9876543210 (Optional)');
+      fireEvent.change(nameInput, { target: { value: 'Rahul Roy' } });
+      fireEvent.change(phoneInput, { target: { value: '9876543210' } });
+
+      const saveBtn = screen.getByText('Save & Start Billing');
+      await act(async () => {
+        fireEvent.click(saveBtn);
+      });
+
+      expect(customerApi.createCustomer).toHaveBeenCalledWith({
+        name: 'Rahul Roy',
+        phone: '9876543210',
+      });
+      expect(onSelectMock).toHaveBeenCalledWith(createdCustomer);
     });
   });
 

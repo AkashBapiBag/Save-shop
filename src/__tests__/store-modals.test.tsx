@@ -381,7 +381,7 @@ describe('components/inventory/CreateProductModal.tsx', () => {
     const nameInput = screen.getByPlaceholderText('e.g. Organic Almond Milk');
     const priceInputs = screen.getAllByPlaceholderText('0.00');
     const discountInput = screen.getByPlaceholderText('e.g. 10 (for 10% off)');
-    const cashbackInput = screen.getByPlaceholderText('e.g. 5 (for 5% cashback)');
+    const cashbackInput = screen.getByPlaceholderText('e.g. 5 (for 5% S.I. Point)');
     const saveBtn = screen.getByText('Save Product to Catalog');
 
     await act(async () => {

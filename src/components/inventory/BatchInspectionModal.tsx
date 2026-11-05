@@ -50,7 +50,7 @@ export const BatchInspectionModal: React.FC<BatchInspectionModalProps> = ({
               Category: {product.category} • Stock: {product.total_current_stock}{' '}
               {product.default_unit}
               {discountVal > 0 ? ` • Disc: ${product.discount_type === 'amount' ? `₹${discountVal}` : `${discountVal}%`}` : ''}
-              {cashbackVal > 0 ? ` • CB: ${product.cashback_type === 'amount' ? `₹${cashbackVal}` : `${cashbackVal}%`}` : ''}
+              {cashbackVal > 0 ? ` • S.I. Point: ${product.cashback_type === 'amount' ? `₹${cashbackVal}` : `${cashbackVal}%`}` : ''}
             </Text>
           </View>
           {onEdit && (

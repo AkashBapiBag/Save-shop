@@ -20,6 +20,7 @@ import { showErrorAlert } from '@/utils/errorHandler';
 export interface CreateCustomerModalProps {
   visible: boolean;
   initialQuery?: string;
+  existingCustomers?: Customer[];
   onClose: () => void;
   onCustomerCreated: (customer: Customer) => void;
 }
@@ -27,6 +28,7 @@ export interface CreateCustomerModalProps {
 export const CreateCustomerModal: React.FC<CreateCustomerModalProps> = ({
   visible,
   initialQuery = '',
+  existingCustomers,
   onClose,
   onCustomerCreated,
 }) => {
@@ -60,6 +62,19 @@ export const CreateCustomerModal: React.FC<CreateCustomerModalProps> = ({
     if (cleanPhone && cleanPhone.length < 10) {
       Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit mobile number, or leave it blank.');
       return;
+    }
+
+    if (cleanPhone && existingCustomers && existingCustomers.length > 0) {
+      const duplicate = existingCustomers.find(
+        (c) => c.phone && c.phone.replace(/\D/g, '') === cleanPhone
+      );
+      if (duplicate) {
+        Alert.alert(
+          'Mobile Number Already Registered',
+          `A customer with mobile number "${cleanPhone}" already exists in this store (${duplicate.name}). Multiple customers with the same mobile number are not allowed in the same store.`
+        );
+        return;
+      }
     }
 
     setIsSubmitting(true);

@@ -159,7 +159,7 @@ describe('POS Components', () => {
 
     expect(screen.getByText('Order Cart (2 items)')).toBeDefined();
     expect(screen.getByText('Organic Milk')).toBeDefined();
-    expect(screen.getByText(/Cashback: \+₹ 6\.50/i)).toBeDefined();
+    expect(screen.getByText(/S\.I\. Point: \+₹ 6\.50/i)).toBeDefined();
     expect(screen.getByText('Clear Cart')).toBeDefined();
 
     fireEvent.click(screen.getByText('Clear Cart'));
@@ -235,7 +235,7 @@ describe('Inventory Components', () => {
     expect(screen.getByText('Organic Milk')).toBeDefined();
     expect(screen.getByText('IN STOCK')).toBeDefined();
     expect(screen.getByText('12% OFF')).toBeDefined();
-    expect(screen.getByText('+5% CB')).toBeDefined();
+    expect(screen.getByText('+5% S.I. Point')).toBeDefined();
     expect(screen.getByText(/Min Stock Alert: 5 LITER/i)).toBeDefined();
 
     fireEvent.click(screen.getByText('Organic Milk'));

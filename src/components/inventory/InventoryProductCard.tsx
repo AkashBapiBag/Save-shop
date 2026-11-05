@@ -49,7 +49,7 @@ export const InventoryProductCard: React.FC<InventoryProductCardProps> = ({
           )}
           {cashbackVal > 0 && (
             <Badge
-              label={item.cashback_type === 'amount' ? `+₹${cashbackVal} CB` : `+${cashbackVal}% CB`}
+              label={item.cashback_type === 'amount' ? `+₹${cashbackVal} S.I. Point` : `+${cashbackVal}% S.I. Point`}
               variant="success"
               size="sm"
               style={{ marginLeft: 6, flexShrink: 0 }}

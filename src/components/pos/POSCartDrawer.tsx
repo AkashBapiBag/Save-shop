@@ -94,12 +94,12 @@ export const POSCartDrawer: React.FC<POSCartDrawerProps> = ({
                     </View>
                   )}
 
-                  {/* Stock Product Automatic Cashback Pill */}
+                  {/* Stock Product Automatic S.I. Point Pill */}
                   {cbAmt > 0 && (
                     <View style={styles.cashbackBadgeRow}>
                       <Ionicons name="gift" size={12} color={Palette.bluePrimary} />
                       <Text style={styles.cashbackBadgeText}>
-                        Cashback: +₹ {cbAmt.toFixed(2)} ({item.cashback_type === 'percentage' ? `${item.cashback_value}%` : `₹${item.cashback_value}`})
+                        S.I. Point: +₹ {cbAmt.toFixed(2)} ({item.cashback_type === 'percentage' ? `${item.cashback_value}%` : `₹${item.cashback_value}`})
                       </Text>
                     </View>
                   )}
@@ -158,7 +158,7 @@ export const POSCartDrawer: React.FC<POSCartDrawerProps> = ({
 
             {calculation.totalCashback > 0 && (
               <View style={styles.breakdownRow}>
-                <Text style={[styles.breakdownLabel, { color: Palette.bluePrimary }]}>Total Cashback</Text>
+                <Text style={[styles.breakdownLabel, { color: Palette.bluePrimary }]}>Total S.I. Point</Text>
                 <Text style={[styles.breakdownValue, { color: Palette.bluePrimary }]}>
                   +₹ {calculation.totalCashback.toFixed(2)}
                 </Text>
